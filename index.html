@@ -11,7 +11,7 @@
   <link id="dynamic-favicon" rel="icon" type="image/png">
   <link id="dynamic-touch-icon" rel="apple-touch-icon">
   <link id="dynamic-manifest" rel="manifest">
-  <title>Überläufer v0.5.2 – SD-Kamera KI-Auswerter</title>
+  <title>Überläufer v0.5.3 – SD-Kamera KI-Auswerter</title>
   <style>
     :root {
       --bg-main: #0b130e;
@@ -1382,7 +1382,7 @@
 
     <div id="home-logo-wrap" onclick="switchTab('import')" title="Zum SD-Stapel-Import"></div>
     <div class="home-brand-title">Überläufer</div>
-    <div class="home-brand-sub">SD-Kamera KI-Auswerter · v0.5.2</div>
+    <div class="home-brand-sub">SD-Kamera KI-Auswerter · v0.5.3</div>
 
     <div class="home-status-pill" onclick="switchTab('kameras')" id="home-status-pill">
       <span class="status-dot" id="home-sm-dot"></span>
@@ -1400,7 +1400,7 @@
   <header class="app-header">
     <div class="header-left">
       <div class="header-top-row">
-        <span class="header-title-pill">🐗 Überläufer <span style="font-size:0.68rem; color:var(--accent-green);">v0.5.2</span></span>
+        <span class="header-title-pill">🐗 Überläufer <span style="font-size:0.68rem; color:var(--accent-green);">v0.5.3</span></span>
         <button type="button" class="icon-pill-btn" id="btn-night-dim" onclick="toggleNightDim()" title="Nacht-Dimmung">🌙</button>
         <span class="status-badge" id="header-db-badge">
           <span class="status-dot" id="header-db-dot"></span>
@@ -1627,6 +1627,7 @@
             </select>
           </div>
           <button type="button" class="btn-sm btn-no" style="padding:8px 10px; font-size:0.76rem;" onclick="rebuildVisitsManually()">🔄 Neu bündeln</button>
+          <button type="button" class="btn-sm btn-warn" style="padding:8px 10px; font-size:0.76rem;" onclick="mergeNearbyVisitsManually(false)" title="Benachbarte Besuche innerhalb der Lückenregel zusammenführen">🔗 Verschmelzen</button>
         </div>
 
         <!-- 4 Ampel-Filter-Tabs -->
@@ -1764,6 +1765,12 @@
 
         <div id="ueb-ready-list"></div>
 
+        <div id="ueb-merge-bar" style="display:none; margin-top:8px;">
+          <button type="button" class="btn-sm btn-warn" style="width:100%; padding:9px;" onclick="mergeNearbyVisitsManually(true)">
+            🔗 Benachbarte Besuche nach Lückenregel verschmelzen
+          </button>
+        </div>
+
         <div id="ueb-send-bar" style="display:none; margin-top:10px; flex-direction:column; gap:7px;">
           <div style="display:flex; gap:8px; align-items:center;">
             <label class="app-label" style="margin-bottom:0; flex:1;" for="ueb-default-status">Sauenmatrix-Status für Übergabe:</label>
@@ -1866,7 +1873,7 @@
           </div>
         </div>
         <p class="tile-sub" style="margin-top:8px; font-size:0.72rem;">
-          Ziel: <code>localStorage</code> immer deutlich unter 4 MB halten. Sobald du 1–2 Beispiel-Einträge aus einem Sauenmatrix-Backup teilst, ergänzen wir dort den passenden 1-Klick-Abhol-Button für <code>sm_cam_inbox_v1</code>.
+          Ziel: <code>localStorage</code> immer deutlich unter 4 MB halten. Übergebene Besuche liegen als leichtes Textpaket in <code>sm_cam_inbox_v1</code> zur Abholung durch die Sauenmatrix bereit.
         </p>
       </div>
 
@@ -1921,8 +1928,8 @@
               <label class="app-label" style="color:#e6f2d0; font-size:0.7rem;" for="setup-pack-size">Bilder pro Anfrage</label>
               <select id="setup-pack-size" class="app-select" style="padding:7px 9px; font-size:0.8rem;" onchange="saveAiPreferences()">
                 <option value="4">4 Bilder / Paket</option>
-                <option value="5" selected>5 Bilder / Paket (Empfohlen)</option>
-                <option value="6">6 Bilder / Paket</option>
+                <option value="5" selected>5 Bilder / Paket (Videos autom. 2×3)</option>
+                <option value="6">6 Bilder / Paket (2 Videos / Anfrage)</option>
               </select>
             </div>
             <div>
@@ -1980,7 +1987,7 @@
       <div class="tile-dark">
         <div class="tile-title-row" style="margin-bottom:6px;">
           <span class="tile-title" style="font-size:0.88rem;">🛠️ System &amp; Version</span>
-          <span class="pill pill-green">Etappe 5 · Endgeprüft (v0.5.2)</span>
+          <span class="pill pill-green">Überläufer v0.5.3</span>
         </div>
         <div class="tile-sub" id="setup-system-info">
           IndexedDB: prüfe…
@@ -2186,7 +2193,7 @@
 
       <!-- Direkt-Aktionen aus der Lupe -->
       <div style="display:flex; gap:7px;">
-        <button type="button" class="btn-sm btn-yes" style="flex:1; padding:10px;" onclick="confirmVisitFromLupe()">✅ Bestätigen</button>
+        <button type="button" class="btn-sm btn-yes" id="lupe-confirm-btn" style="flex:1; padding:10px;" onclick="confirmVisitFromLupe()">✅ Bestätigen</button>
         <button type="button" class="btn-sm btn-no" style="flex:1; padding:10px;" onclick="openEditFromLupe()">✏️ Korrektur</button>
         <button type="button" class="btn-sm btn-danger" style="padding:10px 12px;" onclick="trashVisitFromLupe()" title="In Papierkorb">🗑️</button>
       </div>
@@ -2238,7 +2245,7 @@
           <input type="date" id="ev-date" class="app-input" onchange="updateEditVisitDurationHint()">
         </div>
         <div>
-          <label class="app-label" for="ev-total-count">Gesamt-Stückzahl (Max/Bild)</label>
+          <label class="app-label" for="ev-total-count">Gesamt-Stückzahl (Besuch)</label>
           <input type="number" id="ev-total-count" class="app-input" min="0" max="99" value="1">
         </div>
       </div>
@@ -3296,21 +3303,31 @@
       return isNaN(dt.getTime()) ? null : dt.getTime();
     }
 
-    // Parst OCR-Zeitstempel aus dem Kamera-Infobalken (YYYY-MM-DD HH:MM(:SS) oder DD.MM.YYYY / DD/MM/YYYY)
+    // Parst OCR-Zeitstempel aus dem Kamera-Infobalken (YYYY-MM-DD, DD.MM.YYYY, MM/DD/YYYY inkl. AM/PM)
     function parseOcrDateToMs(str) {
       if (!str || typeof str !== "string") return null;
       const clean = str.trim();
-      let y, mo, d, hh, mm, ss;
-      let m = clean.match(/(20\d{2})[-./](\d{1,2})[-./](\d{1,2})[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+      let y, mo, d, hh, mm, ss, ampm = "";
+      let m = clean.match(/(20\d{2})[-./](\d{1,2})[-./](\d{1,2})[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*(AM|PM))?/i);
       if (m) {
         y = Number(m[1]); mo = Number(m[2]); d = Number(m[3]);
         hh = Number(m[4]); mm = Number(m[5]); ss = Number(m[6] || 0);
+        ampm = (m[7] || "").toUpperCase();
       } else {
-        m = clean.match(/(\d{1,2})[-./](\d{1,2})[-./](20\d{2})[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?/);
+        m = clean.match(/(\d{1,2})[-./](\d{1,2})[-./](20\d{2})[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*(AM|PM))?/i);
         if (!m) return null;
-        d = Number(m[1]); mo = Number(m[2]); y = Number(m[3]);
+        let p1 = Number(m[1]), p2 = Number(m[2]);
+        y = Number(m[3]);
+        if (p1 <= 12 && p2 > 12) {
+          mo = p1; d = p2; // US-Format MM/DD/YYYY erkannt
+        } else {
+          d = p1; mo = p2; // Deutsches Format DD.MM.YYYY
+        }
         hh = Number(m[4]); mm = Number(m[5]); ss = Number(m[6] || 0);
+        ampm = (m[7] || "").toUpperCase();
       }
+      if (ampm === "PM" && hh >= 1 && hh < 12) hh += 12;
+      if (ampm === "AM" && hh === 12) hh = 0;
       if (mo < 1 || mo > 12 || d < 1 || d > 31 || hh > 23 || mm > 59 || ss > 59) return null;
       const dt = new Date(y, mo - 1, d, hh, mm, ss);
       return isNaN(dt.getTime()) ? null : dt.getTime();
@@ -3886,7 +3903,24 @@
       });
     }
 
-    // Baut das nächste Sammel-Paket (4–6 Bilder, Videos bleiben immer zusammen)
+    // Sortiert offene Dateien: verlässliche Zeitstempel chronologisch, bei MP4/FILE_MTIME sauber nach Stapel & Dateiname (Laufnummer)
+    function sortPendingQueueItems(items) {
+      return [...items].sort((a, b) => {
+        const aReliable = (a.timeSource === "EXIF" || a.timeSource === "FILENAME" || a.timeSource === "INFOBAR_OCR") && !a.timeSuspect;
+        const bReliable = (b.timeSource === "EXIF" || b.timeSource === "FILENAME" || b.timeSource === "INFOBAR_OCR") && !b.timeSuspect;
+        if (aReliable && bReliable) {
+          const diff = (a.effectiveTs || 0) - (b.effectiveTs || 0);
+          if (diff !== 0) return diff;
+        }
+        const batchCmp = String(a.batchId || "").localeCompare(String(b.batchId || ""));
+        if (batchCmp !== 0) return batchCmp;
+        const nameCmp = String(a.fileName || "").localeCompare(String(b.fileName || ""), undefined, { numeric: true, sensitivity: "base" });
+        if (nameCmp !== 0) return nameCmp;
+        return (a.effectiveTs || 0) - (b.effectiveTs || 0);
+      });
+    }
+
+    // Baut das nächste Sammel-Paket (4–6 Bilder; bei Einstellung 5 passen 2 Videos à 3 Standbilder = 6 Bilder sauber zusammen)
     function buildNextAiPacket(pendingItems, maxImages) {
       const packet = [];
       let imageCount = 0;
@@ -3895,14 +3929,31 @@
         const frames = Array.isArray(item.aiBlobs) && item.aiBlobs.length > 0 ? item.aiBlobs : [];
         if (frames.length === 0) continue;
 
-        if (packet.length > 0 && (imageCount + frames.length) > maxImages) {
+        const allowTwoVideos = (maxImages === 5 && packet.length === 1 && packet[0].kind === "VIDEO" && item.kind === "VIDEO" && (imageCount + frames.length) <= 6);
+        const limit = allowTwoVideos ? 6 : maxImages;
+
+        if (packet.length > 0 && (imageCount + frames.length) > limit) {
           break;
         }
         packet.push(item);
         imageCount += frames.length;
-        if (imageCount >= maxImages) break;
+        if (imageCount >= limit) break;
       }
       return { packet, imageCount };
+    }
+
+    // Exakte Berechnung der benötigten API-Pakete (identisch zum echten Versand)
+    function estimatePendingPackets(pendingItems, maxImages) {
+      const sorted = sortPendingQueueItems(pendingItems).filter(x => Array.isArray(x.aiBlobs) && x.aiBlobs.length > 0);
+      let idx = 0;
+      let packs = 0;
+      while (idx < sorted.length) {
+        const { packet } = buildNextAiPacket(sorted.slice(idx), maxImages);
+        if (packet.length === 0) break;
+        packs++;
+        idx += packet.length;
+      }
+      return packs;
     }
 
     const GEMINI_RESPONSE_SCHEMA = {
@@ -4009,8 +4060,12 @@
           const frameTag = frames.length > 1
             ? `VIDEO-STANDBILD ${fIdx + 1}/${frames.length} (${item.frameSecs?.[fIdx] ?? "?"}s)`
             : "FOTO";
+          const hasReliableTime = (item.timeSource === "EXIF" || item.timeSource === "FILENAME" || item.timeSource === "INFOBAR_OCR") && !item.timeSuspect;
+          const timeHint = hasReliableTime
+            ? `Bekannte Zeit: ${formatTimestampDE(item.effectiveTs)}`
+            : `Zeit unbekannt (bitte exakt vom eingebrannten Infobalken ablesen; falls unlesbar, ocrTimestamp leer lassen!)`;
           parts.push({
-            text: `Eintrag #${idx} | ${frameTag} | Datei: ${item.fileName} | Balken: ${item.stripPosition || "auto"} | Bekannte Zeit: ${formatTimestampDE(item.effectiveTs)}`
+            text: `Eintrag #${idx} | ${frameTag} | Datei: ${item.fileName} | Balken: ${item.stripPosition || "auto"} | ${timeHint}`
           });
           parts.push({
             inline_data: {
@@ -4031,12 +4086,37 @@
         }
       };
 
-      const resp = await fetch(url, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-        signal
-      });
+      const reqCtrl = new AbortController();
+      let timedOut = false;
+      const onParentAbort = () => reqCtrl.abort();
+      if (signal) {
+        if (signal.aborted) reqCtrl.abort();
+        else signal.addEventListener("abort", onParentAbort, { once: true });
+      }
+      const timeoutId = setTimeout(() => {
+        timedOut = true;
+        reqCtrl.abort();
+      }, 65000);
+
+      let resp;
+      try {
+        resp = await fetch(url, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+          signal: reqCtrl.signal
+        });
+      } catch (fetchErr) {
+        if (timedOut) {
+          const tErr = new Error("Zeitüberschreitung (65 Sek.) – Google antwortet nicht");
+          tErr.isTimeout = true;
+          throw tErr;
+        }
+        throw fetchErr;
+      } finally {
+        clearTimeout(timeoutId);
+        if (signal) signal.removeEventListener("abort", onParentAbort);
+      }
 
       const rawText = await resp.text();
       let parsedJson = null;
@@ -4056,16 +4136,33 @@
       const cleanText = candidateText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
       if (!cleanText) {
         const fin = parsedJson?.candidates?.[0]?.finishReason || "LEER";
-        throw new Error(`Leere KI-Antwort (${fin})`);
+        const pErr = new Error(`Leere KI-Antwort (${fin})`);
+        pErr.isParseError = true;
+        throw pErr;
       }
-      const resultObj = JSON.parse(cleanText);
+      let resultObj;
+      try {
+        resultObj = JSON.parse(cleanText);
+      } catch (jsonErr) {
+        const pErr = new Error("Fehlerhaftes JSON von Gemini");
+        pErr.isParseError = true;
+        throw pErr;
+      }
       if (!resultObj || !Array.isArray(resultObj.results)) {
-        throw new Error("Unerwartete JSON-Struktur von Gemini");
+        const pErr = new Error("Unerwartete JSON-Struktur von Gemini");
+        pErr.isParseError = true;
+        throw pErr;
       }
       return resultObj.results;
     }
 
     function classifyGeminiError(err) {
+      if (err.isTimeout) {
+        return { kind: "TRANSIENT_RETRY", waitSec: 10, reason: err.message || "Zeitüberschreitung bei KI-Anfrage" };
+      }
+      if (err.isParseError) {
+        return { kind: "TRANSIENT_RETRY", waitSec: 6, reason: err.message || "KI-Antwort unlesbar" };
+      }
       if (err.name === "AbortError") {
         return { kind: "ABORT" };
       }
@@ -4130,19 +4227,24 @@
 
       // Zeitstempel-Rangfolge anwenden (Infobalken-OCR prüfen)
       const ocrTsRaw = parseOcrDateToMs(safeEntry.ocrTimestamp);
+      let ocrApplied = false;
       if (ocrTsRaw) {
         const minTs = new Date(2020, 0, 1).getTime();
         const maxTs = Date.now() + 24 * 3600 * 1000;
         if (ocrTsRaw >= minTs && ocrTsRaw <= maxTs) {
-          const ocrEffective = ocrTsRaw + (item.timeOffsetMs || 0);
+          // Falls vorab per Batteriewechsel-Retter auf FILE_MTIME verschoben wurde, diesen Alt-Versatz nicht doppelt auf die echte Infobalken-Zeit addieren
+          const appliedOffsetMs = (item.timeSource === "FILE_MTIME" && item.batchTimeFixed) ? 0 : (item.timeOffsetMs || 0);
+          const ocrEffective = ocrTsRaw + appliedOffsetMs;
           if (item.timeSuspect || item.timeSource === "FILE_MTIME") {
             // Konvertierte MP4 oder verstellte Uhr -> Infobalken-OCR übernimmt!
             if (!item.fileRawTs) item.fileRawTs = item.rawTs;
             item.rawTs = ocrTsRaw;
+            item.timeOffsetMs = appliedOffsetMs;
             item.effectiveTs = ocrEffective;
             item.timeSource = "INFOBAR_OCR";
             item.timeSuspect = false;
             item.timeWarnReason = "";
+            ocrApplied = true;
           } else if (item.timeSource === "EXIF") {
             // EXIF bleibt Nr. 1; bei Abweichung > 30 Min. auf Gelb markieren
             const diffMin = Math.abs(ocrEffective - item.effectiveTs) / 60000;
@@ -4152,6 +4254,14 @@
             }
           }
         }
+      }
+
+      // Falls bei konvertierter MP4 / FILE_MTIME der Infobalken (z. B. wegen Nebel) nicht lesbar war -> klar als Gelb markieren!
+      if (!ocrApplied && item.timeSource === "FILE_MTIME" && !item.batchTimeFixed) {
+        item.timeSuspect = true;
+        item.timeWarnReason = item.kind === "VIDEO"
+          ? "Infobalken nicht lesbar (MP4-Dateizeit prüfen!)"
+          : "Aufnahmezeit nur aus Dateidatum (prüfen!)";
       }
 
       item.status = "DONE";
@@ -4183,9 +4293,7 @@
       }
 
       const allItems = await idbGetAll("queue").catch(() => []);
-      const pendingAll = allItems
-        .filter(x => x.status === "PENDING")
-        .sort((a, b) => (a.effectiveTs || 0) - (b.effectiveTs || 0));
+      const pendingAll = sortPendingQueueItems(allItems.filter(x => x.status === "PENDING"));
 
       if (pendingAll.length === 0) {
         showToast("📭 Keine offenen Dateien in der Warteschlange");
@@ -4199,6 +4307,7 @@
       let processedInRun = 0;
       let consecutiveRpmRetries = 0;
       let consecutiveServerRetries = 0;
+      let consecutiveTransientRetries = 0;
       const packSize = getPackSizePref();
       const paceSec = getPaceSecPref();
 
@@ -4225,9 +4334,9 @@
             break;
           }
 
-          const currentQueue = (await idbGetAll("queue").catch(() => []))
-            .filter(x => x.status === "PENDING")
-            .sort((a, b) => (a.effectiveTs || 0) - (b.effectiveTs || 0));
+          const currentQueue = sortPendingQueueItems(
+            (await idbGetAll("queue").catch(() => [])).filter(x => x.status === "PENDING")
+          );
 
           if (currentQueue.length === 0) {
             updateTachoUI("Fertig ✅", "pill-green", `Alle ${totalAtStart} Dateien erfolgreich ausgewertet!`);
@@ -4271,6 +4380,7 @@
             const results = await callGeminiForPacket(packet, modelName, apiKey, __aiAbortController.signal);
             consecutiveRpmRetries = 0;
             consecutiveServerRetries = 0;
+            consecutiveTransientRetries = 0;
 
             // Ergebnisse strikt per entryIndex zuordnen (niemals auf falsches Foto verschieben!)
             const resByIdx = new Map();
@@ -4362,6 +4472,22 @@
               __aiWorkerState = "RUNNING";
               continue;
             }
+            if (info.kind === "TRANSIENT_RETRY") {
+              consecutiveTransientRetries++;
+              if (consecutiveTransientRetries <= 2) {
+                __aiWorkerState = "COOLDOWN";
+                const ok = await runCountdownSeconds(
+                  info.waitSec || 8,
+                  `⏳ ${info.reason} – automatischer Versuch ${consecutiveTransientRetries}/2 in`
+                );
+                if (!ok) break;
+                __aiWorkerState = "RUNNING";
+                continue;
+              }
+              updateTachoUI("Unterbrochen", "pill-red", `⚠️ ${info.reason} (2× wiederholt) – Fortschritt ist gespeichert.`);
+              showToast("⚠️ Paket nach 2 Versuchen gestoppt");
+              break;
+            }
             if (info.kind === "SERVER_BUSY") {
               consecutiveServerRetries++;
               if (consecutiveServerRetries > 3) {
@@ -4428,9 +4554,8 @@
 
       const imgCnt = pending.filter(x => x.kind === "IMAGE").length;
       const vidCnt = pending.filter(x => x.kind === "VIDEO").length;
-      const totalFrames = pending.reduce((sum, x) => sum + (Array.isArray(x.aiBlobs) ? x.aiBlobs.length : 1), 0);
       const packSize = getPackSizePref();
-      const estPacks = totalFrames > 0 ? Math.ceil(totalFrames / packSize) : 0;
+      const estPacks = estimatePendingPackets(pending, packSize);
 
       const pill = document.getElementById("queue-total-pill");
       if (pill) pill.textContent = `${pending.length} offen`;
@@ -4560,10 +4685,11 @@
       const visits = await idbGetAll("visits").catch(() => []);
       const hasEdited = visits.some(v => v.manualEdited && v.reviewState === "OPEN");
       const resetEdited = hasEdited
-        ? confirm("Sollen auch manuell bearbeitete offene Besuche neu gebündelt werden? (Bestätigte Besuche bleiben immer geschützt.)")
+        ? confirm("Sollen auch manuell bearbeitete offene Besuche neu gebündelt werden? (Bestätigte Besuche und der Papierkorb bleiben geschützt.)")
         : false;
       await syncVisitsFromQueue(true, resetEdited);
       await renderPruefenVisits();
+      await renderUebergabeView();
       showToast("🔄 Besuche mit aktueller Lückenregel neu gebündelt");
     }
 
@@ -4591,6 +4717,78 @@
         (Number(b.ueberlaeuferBache) || 0) + (Number(b.ueberlaeuferKeiler) || 0) +
         (Number(b.frischling) || 0) + (Number(b.grossUnklar) || 0) +
         (Number(b.kleinUnklar) || 0) + (Number(b.unbekannt) || 0);
+    }
+
+    // Klassen-Maximum über mehrere Aufnahmen/Besuche ohne Doppelzählung von Unklar-Klassen (GROSS/KLEIN/UNBEK)
+    function mergeBoarBreakdownsMax(entries) {
+      const exactMax = {
+        keiler: 0,
+        bache: 0,
+        ueberlaeuferBache: 0,
+        ueberlaeuferKeiler: 0,
+        frischling: 0
+      };
+      let maxGross = 0;
+      let maxKlein = 0;
+      let maxUnbek = 0;
+      let peakSingleCount = 0;
+
+      for (const e of (entries || [])) {
+        if (!e) continue;
+        const b = e.boarBreakdown || {};
+        const k = Math.max(0, Number(b.keiler) || 0);
+        const ba = Math.max(0, Number(b.bache) || 0);
+        const ub = Math.max(0, Number(b.ueberlaeuferBache) || 0);
+        const uk = Math.max(0, Number(b.ueberlaeuferKeiler) || 0);
+        const f = Math.max(0, Number(b.frischling) || 0);
+        const gr = Math.max(0, Number(b.grossUnklar) || 0);
+        const kl = Math.max(0, Number(b.kleinUnklar) || 0);
+        const un = Math.max(0, Number(b.unbekannt) || 0);
+
+        if (k > exactMax.keiler) exactMax.keiler = k;
+        if (ba > exactMax.bache) exactMax.bache = ba;
+        if (ub > exactMax.ueberlaeuferBache) exactMax.ueberlaeuferBache = ub;
+        if (uk > exactMax.ueberlaeuferKeiler) exactMax.ueberlaeuferKeiler = uk;
+        if (f > exactMax.frischling) exactMax.frischling = f;
+        if (gr > maxGross) maxGross = gr;
+        if (kl > maxKlein) maxKlein = kl;
+        if (un > maxUnbek) maxUnbek = un;
+
+        const bSum = k + ba + ub + uk + f + gr + kl + un;
+        const singleCnt = Math.max(0, Number(e.totalCount ?? e.maxCount ?? 0) || 0, bSum);
+        if (singleCnt > peakSingleCount) peakSingleCount = singleCnt;
+      }
+
+      const exactSum = exactMax.keiler + exactMax.bache + exactMax.ueberlaeuferBache + exactMax.ueberlaeuferKeiler + exactMax.frischling;
+      const result = Object.assign(emptyBoarBreakdown(), exactMax);
+
+      // Unklar-Klassen nur auffüllen, wenn in einer Aufnahme wirklich MEHR Sauen zu sehen waren als die Summe der klaren Klassen
+      let missing = Math.max(0, peakSingleCount - exactSum);
+      if (missing > 0 && maxGross > 0) {
+        const take = Math.min(missing, maxGross);
+        result.grossUnklar = take;
+        missing -= take;
+      }
+      if (missing > 0 && maxKlein > 0) {
+        const take = Math.min(missing, maxKlein);
+        result.kleinUnklar = take;
+        missing -= take;
+      }
+      if (missing > 0) {
+        result.unbekannt = missing;
+      }
+
+      return {
+        boarBreakdown: result,
+        maxCount: sumBoarBreakdown(result)
+      };
+    }
+
+    function getLocationStreamKey(obj) {
+      if (!obj) return "loc:none";
+      if (obj.spotKey) return obj.spotKey;
+      if (obj.spotName && obj.spotName !== "Unbekannter Standort") return `name:${obj.spotName.trim().toLowerCase()}`;
+      return `cam:${obj.cameraId || "none"}`;
     }
 
     function formatBoarBreakdownText(b) {
@@ -4666,7 +4864,7 @@
       const diffMin = Math.round(Math.max(0, endTs - startTs) / 60000);
       const durationMin = Math.max(1, diffMin);
 
-      // Maximum gleichzeitig sichtbarer Stücke auf EINEM Bild
+      // Maximum gleichzeitig sichtbarer Stücke auf EINEM Bild (für Nicht-Schwarzwild)
       let maxCount = 0;
       clusterItems.forEach(it => {
         const cnt = Number(it.aiResult?.totalCount || 0);
@@ -4687,23 +4885,12 @@
       const bestRes = bestItem.aiResult || {};
       let boarBreakdown = emptyBoarBreakdown();
       if (cat === "SCHWARZWILD") {
-        const src = bestRes.boarBreakdown || {};
-        boarBreakdown = {
-          keiler: Math.max(0, Number(src.keiler) || 0),
-          bache: Math.max(0, Number(src.bache) || 0),
-          ueberlaeuferBache: Math.max(0, Number(src.ueberlaeuferBache) || 0),
-          ueberlaeuferKeiler: Math.max(0, Number(src.ueberlaeuferKeiler) || 0),
-          frischling: Math.max(0, Number(src.frischling) || 0),
-          grossUnklar: Math.max(0, Number(src.grossUnklar) || 0),
-          kleinUnklar: Math.max(0, Number(src.kleinUnklar) || 0),
-          unbekannt: Math.max(0, Number(src.unbekannt) || 0)
-        };
-        const bSum = sumBoarBreakdown(boarBreakdown);
-        if (maxCount > 0 && bSum < maxCount) {
-          boarBreakdown.unbekannt += (maxCount - bSum);
-        } else if (bSum > maxCount) {
-          maxCount = bSum;
-        }
+        const mergedBoar = mergeBoarBreakdownsMax(clusterItems.map(it => ({
+          boarBreakdown: it.aiResult?.boarBreakdown,
+          totalCount: it.aiResult?.totalCount
+        })));
+        boarBreakdown = mergedBoar.boarBreakdown;
+        maxCount = mergedBoar.maxCount;
       }
 
       // Ampel-Bewertung & Gründe für Gelb
@@ -4749,6 +4936,7 @@
         yellowReasons,
         reviewState,
         manualEdited: false,
+        bridgedEmptyCount: 0,
         itemIds: clusterItems.map(i => i.id),
         fileNames: clusterItems.map(i => i.fileName),
         bestItemId: bestItem.id,
@@ -4760,25 +4948,233 @@
       };
     }
 
-    // Bündelt alle DONE-Einträge aus der Warteschlange nach Standort, Wildart & Lückenzeit
+    // Verschmilzt eine Gruppe zusammengehöriger Besuche (gleicher Standort + Wildart) nach Klassen-Maximum
+    function combineVisitsGroup(visitsGroup, queueById = new Map()) {
+      const sorted = [...visitsGroup].sort((a, b) => (a.startTs || 0) - (b.startTs || 0));
+      const base = sorted[0];
+      const startTs = Math.min(...sorted.map(v => v.startTs || Date.now()));
+      const endTs = Math.max(...sorted.map(v => v.endTs || v.startTs || Date.now()));
+      const durationMin = Math.max(1, Math.round(Math.max(0, endTs - startTs) / 60000));
+
+      // Bestes Vorschaubild wählen
+      const bestV = sorted.reduce((best, cur) => {
+        if ((cur.maxCount || 0) !== (best.maxCount || 0)) return (cur.maxCount || 0) > (best.maxCount || 0) ? cur : best;
+        if (confidenceRank(cur.confidence) !== confidenceRank(best.confidence)) return confidenceRank(cur.confidence) > confidenceRank(best.confidence) ? cur : best;
+        if (cur.thumbBlob && !best.thumbBlob) return cur;
+        return best;
+      }, sorted[0]);
+
+      // itemIds & fileNames deduplizieren und chronologisch sortieren
+      const idToName = new Map();
+      const allIds = [];
+      const seenIds = new Set();
+      const extraFileNames = [];
+      for (const v of sorted) {
+        const ids = Array.isArray(v.itemIds) ? v.itemIds : [];
+        const names = Array.isArray(v.fileNames) ? v.fileNames : [];
+        ids.forEach((id, idx) => {
+          if (!seenIds.has(id)) {
+            seenIds.add(id);
+            allIds.push(id);
+            if (names[idx]) idToName.set(id, names[idx]);
+          }
+        });
+        if (ids.length === 0) {
+          names.forEach(n => { if (n && !extraFileNames.includes(n)) extraFileNames.push(n); });
+        }
+      }
+      if (queueById.size > 0) {
+        allIds.sort((a, b) => ((queueById.get(a)?.effectiveTs || 0) - (queueById.get(b)?.effectiveTs || 0)));
+      }
+      const mergedFileNames = [
+        ...allIds.map(id => queueById.get(id)?.fileName || idToName.get(id)).filter(Boolean),
+        ...extraFileNames
+      ];
+
+      let boarBreakdown = emptyBoarBreakdown();
+      let maxCount = Math.max(0, ...sorted.map(v => Number(v.maxCount || 0)));
+      if (base.category === "SCHWARZWILD") {
+        const mergedBoar = mergeBoarBreakdownsMax(sorted.map(v => ({
+          boarBreakdown: v.boarBreakdown,
+          maxCount: v.maxCount
+        })));
+        boarBreakdown = mergedBoar.boarBreakdown;
+        maxCount = mergedBoar.maxCount;
+      }
+
+      const reasonsSet = new Set();
+      sorted.forEach(v => {
+        if (v.reviewState === "OPEN" && Array.isArray(v.yellowReasons)) {
+          v.yellowReasons.forEach(r => { if (r) reasonsSet.add(r); });
+        }
+      });
+      const yellowReasons = Array.from(reasonsSet);
+
+      const allConfirmed = sorted.every(v => v.reviewState === "CONFIRMED");
+      const anyYellow = yellowReasons.length > 0;
+      const reviewState = allConfirmed ? "CONFIRMED" : "OPEN";
+      const ampel = reviewState === "CONFIRMED" ? "GREEN" : (anyYellow ? "YELLOW" : "GREEN");
+
+      const firstRotten = sorted.find(v => v.rottenTag)?.rottenTag || "";
+      const firstMapped = sorted.find(v => v.mappedKanzel)?.mappedKanzel || "";
+      const firstTemp = sorted.find(v => v.ocrTempC)?.ocrTempC || "";
+      const notesList = [];
+      sorted.forEach(v => {
+        const n = String(v.notes || "").trim();
+        if (n && !notesList.includes(n)) notesList.push(n);
+      });
+      const bridgedEmptyCount = sorted.reduce((s, v) => s + (Number(v.bridgedEmptyCount) || 0), 0);
+
+      // Bevorzuge eine bestehende CONFIRMED-ID, sonst erste ID
+      const anchor = sorted.find(v => v.reviewState === "CONFIRMED") || base;
+
+      return {
+        ...anchor,
+        spotKey: anchor.spotKey || base.spotKey || "",
+        spotName: anchor.spotName || base.spotName || "Unbekannter Standort",
+        mappedKanzel: firstMapped,
+        category: base.category,
+        speciesDetail: bestV.speciesDetail || base.speciesDetail,
+        startTs,
+        endTs,
+        durationMin,
+        maxCount,
+        boarBreakdown,
+        rottenTag: firstRotten,
+        notes: notesList.slice(0, 2).join(" | "),
+        confidence: bestV.confidence || "MITTEL",
+        ampel,
+        yellowReasons: reviewState === "CONFIRMED" ? [] : yellowReasons,
+        reviewState,
+        manualEdited: sorted.some(v => v.manualEdited),
+        bridgedEmptyCount,
+        itemIds: allIds,
+        fileNames: mergedFileNames,
+        bestItemId: bestV.bestItemId || anchor.bestItemId,
+        bestFrameIndex: Number(bestV.bestFrameIndex || 0),
+        thumbBlob: bestV.thumbBlob || anchor.thumbBlob || null,
+        ocrTempC: firstTemp,
+        updatedAt: Date.now()
+      };
+    }
+
+    // Verschmilzt benachbarte/überlappende Besuche (gleicher Standort + Wildart <= Lückenregel)
+    async function mergeNearbyVisits(options = {}) {
+      const { onlyConfirmed = false, targetVisitId = null, silent = false } = options;
+      const gapMs = getVisitGapMinutes() * 60000;
+      const allVisits = await idbGetAll("visits").catch(() => []);
+      const allQueue = await idbGetAll("queue").catch(() => []);
+      const queueById = new Map(allQueue.map(q => [q.id, q]));
+
+      const eligible = allVisits.filter(v => {
+        if (v.reviewState === "SENT" || v.reviewState === "TRASHED" || v.ampel === "TRASH") return false;
+        if (v.category === "LEERBILD") return false;
+        if (onlyConfirmed && v.reviewState !== "CONFIRMED") return false;
+        return true;
+      });
+
+      const streams = new Map();
+      for (const v of eligible) {
+        const spKey = getSpeciesGroupKey(v.category, v.speciesDetail);
+        const locKey = getLocationStreamKey(v);
+        const key = `${locKey}||${spKey}`;
+        if (!streams.has(key)) streams.set(key, []);
+        streams.get(key).push(v);
+      }
+
+      let mergedGroupsCount = 0;
+      let removedVisitsCount = 0;
+
+      for (const list of streams.values()) {
+        if (list.length <= 1) continue;
+        list.sort((a, b) => (a.startTs || 0) - (b.startTs || 0));
+
+        let group = [list[0]];
+        let groupEnd = list[0].endTs || list[0].startTs || 0;
+
+        const flushGroup = async (grp) => {
+          if (grp.length <= 1) return;
+          if (targetVisitId && !grp.some(x => x.id === targetVisitId)) return;
+
+          const combined = combineVisitsGroup(grp, queueById);
+          // Wenn manuell ein einzelner Besuch korrigiert wurde, bleibt das verschmolzene Ergebnis bestätigt
+          if (targetVisitId) {
+            combined.reviewState = "CONFIRMED";
+            combined.ampel = "GREEN";
+            combined.yellowReasons = [];
+            combined.manualEdited = true;
+          }
+          await idbPut("visits", combined);
+          for (const oldV of grp) {
+            if (oldV.id !== combined.id) {
+              removeInboxEntryByVisitIdSilent(oldV.id);
+              await idbDelete("visits", oldV.id);
+              removedVisitsCount++;
+            }
+          }
+          mergedGroupsCount++;
+        };
+
+        for (let i = 1; i < list.length; i++) {
+          const cur = list[i];
+          const curStart = cur.startTs || 0;
+          const curEnd = cur.endTs || curStart;
+          if ((curStart - groupEnd) <= gapMs) {
+            group.push(cur);
+            if (curEnd > groupEnd) groupEnd = curEnd;
+          } else {
+            await flushGroup(group);
+            group = [cur];
+            groupEnd = curEnd;
+          }
+        }
+        await flushGroup(group);
+      }
+
+      if (!silent) {
+        await renderPruefenVisits();
+        await renderUebergabeView();
+        await refreshDiagnostics();
+      }
+      return { mergedGroupsCount, removedVisitsCount };
+    }
+
+    async function mergeNearbyVisitsManually(onlyConfirmed = false) {
+      const gapMin = getVisitGapMinutes();
+      const label = onlyConfirmed ? "bestätigten Schwarzwild-Besuche" : "offenen & bestätigten Besuche";
+      if (!confirm(`Alle zeitlich zusammenhängenden ${label} (gleicher Standort, gleiche Wildart, max. ${gapMin} Min. Abstand) nach dem Klassen-Maximum zusammenführen? (Bereits übergebene Besuche bleiben unangetastet.)`)) {
+        return;
+      }
+      const res = await mergeNearbyVisits({ onlyConfirmed, silent: false });
+      if (res.removedVisitsCount > 0) {
+        showToast(`🔗 ${res.removedVisitsCount + res.mergedGroupsCount} Einträge zu ${res.mergedGroupsCount} sauberen Besuch(en) verschmolzen`);
+      } else {
+        showToast(`ℹ️ Keine benachbarten Besuche innerhalb von ${gapMin} Min. gefunden`);
+      }
+    }
+
+    // Bündelt alle DONE-Einträge aus der Warteschlange nach Standort, Wildart & Lückenzeit (inkl. Nebel-Leerbild-Überbrückung)
     async function syncVisitsFromQueue(forceRebuild = false, resetEdited = false) {
       const gapMs = getVisitGapMinutes() * 60000;
       const doneItems = (await idbGetAll("queue").catch(() => []))
         .filter(x => x.status === "DONE")
         .sort((a, b) => (a.effectiveTs || 0) - (b.effectiveTs || 0));
+      const queueById = new Map(doneItems.map(q => [q.id, q]));
 
       const existingVisits = await idbGetAll("visits").catch(() => []);
       const doneIdSet = new Set(doneItems.map(i => i.id));
 
-      // Geschützte Besuche behalten (bestätigt, übergeben oder manuell bearbeitet)
+      // Geschützte Besuche behalten (bestätigt, übergeben, manuell bearbeitet oder manuell gelöscht)
       const protectedVisits = [];
       const protectedItemIds = new Set();
 
       for (const v of existingVisits) {
         const hasAnyQueueItem = (v.itemIds || []).some(id => doneIdSet.has(id));
+        const isManualTrash = (v.reviewState === "TRASHED" && v.manualEdited);
         const isProtected =
           v.reviewState === "CONFIRMED" ||
           v.reviewState === "SENT" ||
+          isManualTrash ||
           (v.fromBackup && !hasAnyQueueItem) ||
           (!resetEdited && v.manualEdited);
 
@@ -4792,21 +5188,57 @@
 
       // Nur ungeschützte DONE-Items neu bündeln
       const freeItems = doneItems.filter(it => !protectedItemIds.has(it.id));
+      const freeWildlife = freeItems.filter(it => (it.aiResult?.category || "UNKLAR") !== "LEERBILD");
+      const freeEmpty = freeItems.filter(it => (it.aiResult?.category || "UNKLAR") === "LEERBILD");
 
-      // Nach (Standort + Wildart-Gruppe) aufteilen
+      // 1. Erst alle Nicht-Leerbild-Einträge nach (Standort + Wildart-Gruppe) bündeln
       const streams = new Map();
-      for (const it of freeItems) {
+      for (const it of freeWildlife) {
         const cat = it.aiResult?.category || "UNKLAR";
         const spKey = getSpeciesGroupKey(cat, it.aiResult?.speciesDetail);
-        const locKey = it.spotKey || (it.spotName && it.spotName !== "Unbekannter Standort" ? it.spotName : `cam:${it.cameraId || "none"}`);
+        const locKey = getLocationStreamKey(it);
         const streamKey = `${locKey}||${spKey}`;
         if (!streams.has(streamKey)) streams.set(streamKey, { spKey, items: [] });
         streams.get(streamKey).items.push(it);
       }
 
+      const activeVisits = [...protectedVisits.filter(v => v.reviewState !== "TRASHED" && v.category !== "LEERBILD")];
+
       for (const { spKey, items } of streams.values()) {
         items.sort((a, b) => (a.effectiveTs || 0) - (b.effectiveTs || 0));
         let cluster = [];
+
+        const commitCluster = async (cl) => {
+          const visitObj = buildVisitObjectFromCluster(cl, spKey);
+          // Prüfen, ob der neue Cluster direkt in einen bestehenden CONFIRMED-Besuch (nicht SENT) am selben Sitz fällt
+          const vLoc = getLocationStreamKey(visitObj);
+          const matchConfirmed = activeVisits.find(ev =>
+            ev.reviewState === "CONFIRMED" &&
+            getLocationStreamKey(ev) === vLoc &&
+            getSpeciesGroupKey(ev.category, ev.speciesDetail) === spKey &&
+            visitObj.startTs <= (ev.endTs || ev.startTs) + gapMs &&
+            visitObj.endTs >= (ev.startTs || 0) - gapMs
+          );
+          if (matchConfirmed) {
+            const combined = combineVisitsGroup([matchConfirmed, visitObj], queueById);
+            // Nur wenn neue Warnungen vorliegen wieder auf OPEN/YELLOW, sonst sauber im bestätigten Besuch ergänzen
+            if (visitObj.yellowReasons && visitObj.yellowReasons.length > 0) {
+              combined.reviewState = "OPEN";
+              combined.ampel = "YELLOW";
+              combined.yellowReasons = [...visitObj.yellowReasons];
+            } else {
+              combined.reviewState = "CONFIRMED";
+              combined.ampel = "GREEN";
+              combined.yellowReasons = [];
+            }
+            await idbPut("visits", combined);
+            const idx = activeVisits.indexOf(matchConfirmed);
+            if (idx >= 0) activeVisits[idx] = combined;
+          } else {
+            await idbPut("visits", visitObj);
+            activeVisits.push(visitObj);
+          }
+        };
 
         for (const it of items) {
           if (cluster.length === 0) {
@@ -4815,18 +5247,74 @@
           }
           const prev = cluster[cluster.length - 1];
           const gap = (it.effectiveTs || 0) - (prev.effectiveTs || 0);
-          // Leerbilder bündeln wir ebenfalls bei <= gapMs, damit der Papierkorb schön kompakt bleibt
           if (gap <= gapMs) {
             cluster.push(it);
           } else {
-            const visitObj = buildVisitObjectFromCluster(cluster, spKey);
-            await idbPut("visits", visitObj);
+            await commitCluster(cluster);
             cluster = [it];
           }
         }
         if (cluster.length > 0) {
-          const visitObj = buildVisitObjectFromCluster(cluster, spKey);
-          await idbPut("visits", visitObj);
+          await commitCluster(cluster);
+        }
+      }
+
+      // 2. Nebel-/Leerbilder mitten innerhalb eines aktiven Wild-Besuchs (selber Standort, startTs <= ts <= endTs) sauber überbrücken
+      const remainingEmpty = [];
+      for (const em of freeEmpty) {
+        const emTs = em.effectiveTs || 0;
+        const emLoc = getLocationStreamKey(em);
+        const hostCandidates = activeVisits.filter(v =>
+          v.reviewState !== "SENT" &&
+          v.category !== "UNKLAR" &&
+          v.category !== "LEERBILD" &&
+          getLocationStreamKey(v) === emLoc &&
+          emTs >= (v.startTs || 0) &&
+          emTs <= (v.endTs || v.startTs || 0)
+        );
+        // Schwarzwild-Besuche priorisieren
+        const host = hostCandidates.find(v => v.category === "SCHWARZWILD") || hostCandidates[0] || null;
+        if (host) {
+          const ids = Array.isArray(host.itemIds) ? [...host.itemIds] : [];
+          if (!ids.includes(em.id)) {
+            ids.push(em.id);
+            ids.sort((a, b) => ((queueById.get(a)?.effectiveTs || 0) - (queueById.get(b)?.effectiveTs || 0)));
+            host.itemIds = ids;
+            host.fileNames = ids.map(id => queueById.get(id)?.fileName).filter(Boolean);
+            host.bridgedEmptyCount = (Number(host.bridgedEmptyCount) || 0) + 1;
+            host.updatedAt = Date.now();
+            await idbPut("visits", host);
+          }
+        } else {
+          remainingEmpty.push(em);
+        }
+      }
+
+      // 3. Übrige echte Leerbilder außerhalb eines Besuchs kompakt in den Papierkorb bündeln
+      const emptyStreams = new Map();
+      for (const em of remainingEmpty) {
+        const locKey = getLocationStreamKey(em);
+        if (!emptyStreams.has(locKey)) emptyStreams.set(locKey, []);
+        emptyStreams.get(locKey).push(em);
+      }
+      for (const items of emptyStreams.values()) {
+        items.sort((a, b) => (a.effectiveTs || 0) - (b.effectiveTs || 0));
+        let cluster = [];
+        for (const it of items) {
+          if (cluster.length === 0) {
+            cluster.push(it);
+            continue;
+          }
+          const prev = cluster[cluster.length - 1];
+          if ((it.effectiveTs || 0) - (prev.effectiveTs || 0) <= gapMs) {
+            cluster.push(it);
+          } else {
+            await idbPut("visits", buildVisitObjectFromCluster(cluster, "LEERBILD"));
+            cluster = [it];
+          }
+        }
+        if (cluster.length > 0) {
+          await idbPut("visits", buildVisitObjectFromCluster(cluster, "LEERBILD"));
         }
       }
 
@@ -5024,6 +5512,7 @@
             ${boarTxt ? `<div class="visit-boar-strip">🐗 ${escapeHTML(boarTxt)}</div>` : ""}
             ${(!isConfirmed && !isTrash && v.yellowReasons && v.yellowReasons.length > 0) ? `<div class="visit-warn-strip">⚠️ Prüfen: ${escapeHTML(v.yellowReasons.join(" · "))}</div>` : ""}
 
+            ${v.bridgedEmptyCount > 0 ? `<div style="font-size:0.69rem; color:#a7d9b8; margin-top:-2px;">🌫️ ${v.bridgedEmptyCount} Nebel-/Leerbild(er) mitten im Besuch überbrückt</div>` : ""}
             <div class="visit-filenames">📄 ${escapeHTML(filesDisplay || "Keine Dateinamen")}</div>
 
             <div class="visit-actions">${actionsHtml}</div>
@@ -5035,6 +5524,10 @@
     async function confirmVisit(visitId) {
       const v = await idbGet("visits", visitId).catch(() => null);
       if (!v) return;
+      if (v.reviewState === "SENT") {
+        showToast("ℹ️ Besuch wurde bereits übergeben");
+        return;
+      }
       v.reviewState = "CONFIRMED";
       v.ampel = "GREEN";
       v.yellowReasons = [];
@@ -5090,7 +5583,11 @@
       if (!v) return;
       v.reviewState = "OPEN";
       v.ampel = "YELLOW";
-      if (v.category === "LEERBILD") v.category = "UNKLAR";
+      if (v.category === "LEERBILD") {
+        v.category = "UNKLAR";
+        if (!v.speciesDetail || /leerbild/i.test(v.speciesDetail)) v.speciesDetail = "Manuell prüfen";
+        if (/leerbild|kein tier/i.test(v.notes || "")) v.notes = "";
+      }
       v.yellowReasons = ["Aus Papierkorb wiederhergestellt"];
       v.manualEdited = true;
       v.updatedAt = Date.now();
@@ -5233,6 +5730,12 @@
       __lupeIdx = Math.min(__lupeFrames.length - 1, Math.max(0, startIdx));
       document.getElementById("lupe-title").textContent = `🔍 ${getCategoryLabelDE(v.category)} · ${v.spotName}`;
       document.getElementById("lupe-sub").textContent = `${v.speciesDetail} (${v.maxCount}×) · ${formatDateDE(v.startTs)}`;
+      const lupeConfBtn = document.getElementById("lupe-confirm-btn");
+      if (lupeConfBtn) {
+        const isSent = v.reviewState === "SENT";
+        lupeConfBtn.disabled = isSent;
+        lupeConfBtn.textContent = isSent ? "📤 Übergeben" : "✅ Bestätigen";
+      }
       setLupePreset(100, 100, 100);
       renderLupeFrame();
       document.getElementById("lupe-modal").classList.add("open");
@@ -5492,11 +5995,22 @@
 
       removeInboxEntryByVisitIdSilent(v.id);
       await idbPut("visits", v);
+      let mergedAfterEdit = 0;
+      if (cat !== "LEERBILD") {
+        const mRes = await mergeNearbyVisits({ onlyConfirmed: false, targetVisitId: v.id, silent: true });
+        mergedAfterEdit = mRes.removedVisitsCount;
+      }
       closeEditVisitModal();
       await renderPruefenVisits();
       await renderUebergabeView();
       await refreshDiagnostics();
-      showToast(cat === "LEERBILD" ? "🗑️ Als Leerbild in den Papierkorb" : "✅ Korrektur gespeichert & bestätigt");
+      if (cat === "LEERBILD") {
+        showToast("🗑️ Als Leerbild in den Papierkorb");
+      } else if (mergedAfterEdit > 0) {
+        showToast(`✅ Gespeichert & mit ${mergedAfterEdit} Nachbar-Besuch(en) verschmolzen`);
+      } else {
+        showToast("✅ Korrektur gespeichert & bestätigt");
+      }
     }
 
     async function trashEditedVisit() {
@@ -5678,15 +6192,39 @@
 
     async function writeBatchOffset(newOffsetMs, additive = false) {
       if (!__tfBatchId || __tfItems.length === 0) return;
+      const updatedMap = new Map();
       for (const item of __tfItems) {
         const offsetMs = additive ? ((item.timeOffsetMs || 0) + newOffsetMs) : newOffsetMs;
         item.timeOffsetMs = offsetMs;
         item.effectiveTs = item.rawTs + offsetMs;
+        item.batchTimeFixed = (offsetMs !== 0);
         const plaus = checkTimestampPlausibility(item.effectiveTs, item.timeSource, item.kind);
         item.timeSuspect = plaus.suspect;
         item.timeWarnReason = plaus.reason;
         await idbPut("queue", item);
+        updatedMap.set(item.id, item);
       }
+
+      // Auch bereits bestätigte oder manuell bearbeitete Besuche (außer SENT) zeitlich nachziehen
+      const allVisits = await idbGetAll("visits").catch(() => []);
+      for (const v of allVisits) {
+        if (v.reviewState === "SENT") continue;
+        const ids = Array.isArray(v.itemIds) ? v.itemIds : [];
+        if (!ids.some(id => updatedMap.has(id))) continue;
+        const tsList = [];
+        for (const id of ids) {
+          const q = updatedMap.get(id) || await idbGet("queue", id).catch(() => null);
+          if (q && q.effectiveTs) tsList.push(q.effectiveTs);
+        }
+        if (tsList.length > 0) {
+          v.startTs = Math.min(...tsList);
+          v.endTs = Math.max(...tsList);
+          v.durationMin = Math.max(1, Math.round(Math.max(0, v.endTs - v.startTs) / 60000));
+          v.updatedAt = Date.now();
+          await idbPut("visits", v);
+        }
+      }
+
       closeTimeFixModal();
       await syncVisitsFromQueue(false);
       await renderQueueOverview();
@@ -5825,7 +6363,14 @@
     function loadApiKeyUI() {
       const key = safeGetItem(UL_API_KEY_STORAGE, "");
       const inp = document.getElementById("gemini-key-input");
-      if (inp) inp.value = key;
+      const visBtn = document.getElementById("btn-toggle-key-vis");
+      if (inp) {
+        inp.value = key;
+        inp.type = (key && key.length >= 10) ? "password" : "text";
+      }
+      if (visBtn) {
+        visBtn.textContent = (inp && inp.type === "password") ? "👁️" : "🙈";
+      }
       const pill = document.getElementById("setup-key-pill");
       const chip = document.getElementById("header-key-chip");
       if (key && key.length >= 20) {
@@ -5963,7 +6508,7 @@
         if (logMs !== null && visit.startTs) {
           return Math.abs(logMs - visit.startTs) <= 15 * 60000;
         }
-        return String(log.date || "").slice(0, 10) === vDate;
+        return false;
       });
     }
 
@@ -5981,7 +6526,7 @@
         inboxId: `ul_${v.id}`,
         visitId: v.id,
         source: "UEBERLAEUFER",
-        sourceVersion: "0.5.2",
+        sourceVersion: "0.5.3",
         createdAt: Date.now(),
         status: statusVal || "GREEN",
         date: formatIsoDateLocal(v.startTs),
@@ -6044,13 +6589,16 @@
       // 1. Liste bereiter Schwarzwild-Besuche
       const readyListEl = document.getElementById("ueb-ready-list");
       const sendBarEl = document.getElementById("ueb-send-bar");
+      const mergeBarEl = document.getElementById("ueb-merge-bar");
 
       if (readyListEl) {
         if (readySw.length === 0) {
           if (sendBarEl) sendBarEl.style.display = "none";
+          if (mergeBarEl) mergeBarEl.style.display = "none";
           readyListEl.innerHTML = `<div class="tile-sub" style="text-align:center; padding:10px 6px;">Aktuell keine neuen Schwarzwild-Besuche zur Übergabe offen. Bestätige Besuche zuerst im Tab <strong>🚦 Prüfen</strong>.</div>`;
         } else {
           if (sendBarEl) sendBarEl.style.display = "flex";
+          if (mergeBarEl) mergeBarEl.style.display = readySw.length > 1 ? "block" : "none";
           readyListEl.innerHTML = readySw.map(v => {
             const targetKanzel = v.mappedKanzel || "";
             const effectiveTarget = targetKanzel || v.spotName || "Unbekannt";
@@ -6077,9 +6625,12 @@
                   <div style="flex:1; min-width:0; font-size:0.76rem; line-height:1.4;">
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                       <strong style="color:#fff;">📍 ${escapeHTML(effectiveTarget)}</strong>
-                      <span class="pill ${possibleDup ? "pill-yellow" : "pill-green"}">
-                        ${possibleDup ? "⚠️ Evtl. schon in SMX" : `🐗 ${v.maxCount || 0}×`}
-                      </span>
+                      <div style="display:flex; align-items:center; gap:5px;">
+                        <span class="pill ${possibleDup ? "pill-yellow" : "pill-green"}">
+                          ${possibleDup ? "⚠️ Evtl. schon in SMX" : `🐗 ${v.maxCount || 0}×`}
+                        </span>
+                        <button type="button" class="btn-sm btn-no" style="padding:3px 7px; font-size:0.7rem;" onclick="openEditVisitModal('${escapeHTML(v.id)}')" title="Besuch korrigieren">✏️</button>
+                      </div>
                     </div>
                     <div style="color:#d4f3dd; font-weight:700;">
                       📅 ${escapeHTML(formatDateDE(v.startTs))} · 🕒 ${escapeHTML(timeRange)}
@@ -6188,8 +6739,8 @@
       }
       const statusVal = document.getElementById("ueb-default-status")?.value || "GREEN";
       const inbox = readCamInbox();
-      const existingIds = new Set(inbox.map(e => e.inboxId));
       let added = 0;
+      let updated = 0;
 
       const visitsToMarkSent = [];
       for (const chk of checks) {
@@ -6197,9 +6748,12 @@
         const v = await idbGet("visits", vid).catch(() => null);
         if (!v) continue;
         const entry = buildInboxEntryFromVisit(v, statusVal);
-        if (!existingIds.has(entry.inboxId)) {
+        const existIdx = inbox.findIndex(e => e.inboxId === entry.inboxId);
+        if (existIdx >= 0) {
+          inbox[existIdx] = entry;
+          updated++;
+        } else {
           inbox.push(entry);
-          existingIds.add(entry.inboxId);
           added++;
         }
         visitsToMarkSent.push({ v, kanzel: entry.kanzel });
@@ -6224,7 +6778,8 @@
       await renderUebergabeView();
       await renderPruefenVisits();
       await refreshDiagnostics();
-      showToast(`📤 ${added} Schwarzwild-Besuch(e) in Durchreiche gelegt`);
+      const totalMoved = added + updated;
+      showToast(updated > 0 && added === 0 ? `📤 ${updated} Eintrag/Einträge in Durchreiche aktualisiert` : `📤 ${totalMoved} Schwarzwild-Besuch(e) in Durchreiche gelegt`);
     }
 
     async function removeSingleInboxEntry(inboxId) {
@@ -6347,7 +6902,7 @@
 
       const payload = {
         app: "Ueberlaeufer",
-        version: "0.5.2",
+        version: "0.5.3",
         exportedAt: new Date().toISOString(),
         preferences: {
           packSize: getPackSizePref(),
@@ -6457,6 +7012,10 @@
         return;
       }
 
+      if (!confirm(`Große 1024-px-Arbeitsbilder von ${finishedItemIds.size} fertigen Aufnahmen wirklich entfernen? (Die kleinen Vorschauen bleiben erhalten, aber die hochauflösende Restlicht-Lupe steht für diese Besuche danach nicht mehr zur Verfügung.)`)) {
+        return;
+      }
+
       let freedBytes = 0;
       let cleanedItems = 0;
 
@@ -6526,7 +7085,7 @@
 
       const allVisits = await idbGetAll("visits").catch(() => []);
       const confSw = allVisits.filter(v => v.reviewState === "CONFIRMED" && v.category === "SCHWARZWILD").length;
-      const confOther = allVisits.filter(v => v.reviewState === "CONFIRMED" && v.category !== "SCHWARZWILD").length;
+      const confOther = allVisits.filter(v => (v.reviewState === "CONFIRMED" || v.reviewState === "SENT") && v.category !== "SCHWARZWILD").length;
       const uebSwEl = document.getElementById("ueb-confirmed-sw-val");
       const uebOtEl = document.getElementById("ueb-confirmed-other-val");
       if (uebSwEl) uebSwEl.textContent = `${confSw}`;

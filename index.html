@@ -11,7 +11,7 @@
   <link id="dynamic-favicon" rel="icon" type="image/png">
   <link id="dynamic-touch-icon" rel="apple-touch-icon">
   <link id="dynamic-manifest" rel="manifest">
-  <title>Überläufer v0.5.5 – SD-Kamera KI-Auswerter</title>
+  <title>Überläufer v0.5.6 – SD-Kamera KI-Auswerter</title>
   <style>
     :root {
       --bg-main: #0b130e;
@@ -1370,7 +1370,7 @@
 
 
     /* ===================================================================== */
-    /* v0.5.5: TROPHÄENTRÄGER, WILDARTEN-BADGES & ENTSCHLACKTE ÜBERGABE      */
+    /* v0.5.5 / v0.5.6: TROPHÄENTRÄGER, WILDARTEN & ENTSCHLACKTE ÜBERGABE    */
     /* ===================================================================== */
     .pill-trophy {
       background: rgba(244, 196, 48, 0.24);
@@ -1479,7 +1479,7 @@
 
     <div id="home-logo-wrap" onclick="switchTab('import')" title="Zum SD-Stapel-Import"></div>
     <div class="home-brand-title">Überläufer</div>
-    <div class="home-brand-sub">SD-Kamera KI-Auswerter · v0.5.5</div>
+    <div class="home-brand-sub">SD-Kamera KI-Auswerter · v0.5.6</div>
 
     <div class="home-status-pill" onclick="switchTab('kameras')" id="home-status-pill">
       <span class="status-dot" id="home-sm-dot"></span>
@@ -1497,7 +1497,7 @@
   <header class="app-header">
     <div class="header-left">
       <div class="header-top-row">
-        <span class="header-title-pill">🐗 Überläufer <span style="font-size:0.68rem; color:var(--accent-green);">v0.5.5</span></span>
+        <span class="header-title-pill">🐗 Überläufer <span style="font-size:0.68rem; color:var(--accent-green);">v0.5.6</span></span>
         <button type="button" class="icon-pill-btn" id="btn-night-dim" onclick="toggleNightDim()" title="Nacht-Dimmung">🌙</button>
         <span class="status-badge" id="header-db-badge">
           <span class="status-dot" id="header-db-dot"></span>
@@ -2164,7 +2164,7 @@
       <div class="tile-dark">
         <div class="tile-title-row" style="margin-bottom:6px;">
           <span class="tile-title" style="font-size:0.88rem;">🛠️ System &amp; Version</span>
-          <span class="pill pill-green">Überläufer v0.5.5</span>
+          <span class="pill pill-green">Überläufer v0.5.6</span>
         </div>
         <div class="tile-sub" id="setup-system-info">
           IndexedDB: prüfe…
@@ -2417,14 +2417,16 @@
       </div>
 
       <div class="form-row">
-        <label class="app-label" for="ev-spot-select">Standort</label>
+        <label class="app-label" for="ev-spot-select">Standort (oder „Revier allgemein“ ohne feste Kanzel)</label>
         <select id="ev-spot-select" class="app-select"></select>
+        <input type="text" id="ev-custom-spot" class="app-input" style="margin-top:6px; padding:8px 10px; font-size:0.8rem;" placeholder="Optional: freier Ortsname (z. B. Wechsel, Bahndamm) – leer = Auswahl oben">
       </div>
 
       <div class="form-grid-2 form-row">
         <div>
           <label class="app-label" for="ev-date">Datum</label>
-          <input type="date" id="ev-date" class="app-input" onchange="updateEditVisitDurationHint()">
+          <input type="date" id="ev-date" class="app-input" onchange="updateEditVisitDurationHint(); syncSwapDateButtonUI();">
+          <button type="button" class="btn-sm btn-warn" id="ev-swap-dm-btn" style="width:100%; margin-top:5px; padding:5px 7px; font-size:0.7rem;" onclick="swapEditVisitDayMonth()">🔄 Tag ↔ Monat tauschen</button>
         </div>
         <div>
           <label class="app-label" for="ev-total-count">Gesamt-Stückzahl (Besuch)</label>
@@ -3145,6 +3147,13 @@
       });
     }
 
+    const REVIER_ALLGEMEIN_SPOT_KEY = "ul:revier_allgemein";
+
+    function isFlexibleNoKanzelSpotKey(key) {
+      const k = String(key || "");
+      return k === REVIER_ALLGEMEIN_SPOT_KEY || k.startsWith("ul:custom:");
+    }
+
     async function getAllAvailableSpots() {
       const smSpots = readSauenmatrixKanzeln().map(s => ({
         key: `sm:${s.name}`,
@@ -3160,7 +3169,14 @@
         type: "KAMERAPLATZ",
         mappedKanzel: sp.mappedKanzel || ""
       }));
-      return [...smSpots, ...ulSpots];
+      const builtinSpots = [{
+        key: REVIER_ALLGEMEIN_SPOT_KEY,
+        name: "Revier allgemein",
+        source: "BUILTIN",
+        type: "REVIER",
+        mappedKanzel: ""
+      }];
+      return [...smSpots, ...ulSpots, ...builtinSpots];
     }
 
     async function populateSpotSelect(selectEl, selectedKey = "", includeEmpty = true) {
@@ -3176,7 +3192,19 @@
 
       const smOnly = allSpots.filter(s => s.source === "SMX");
       const ulOnly = allSpots.filter(s => s.source === "UL");
+      const builtinOnly = allSpots.filter(s => s.source === "BUILTIN");
 
+      if (builtinOnly.length > 0) {
+        const grp = document.createElement("optgroup");
+        grp.label = "Ohne feste Kanzel / Gemischte Ordner";
+        builtinOnly.forEach(s => {
+          const opt = document.createElement("option");
+          opt.value = s.key;
+          opt.textContent = `🌲 ${s.name} (ohne feste Kanzel)`;
+          grp.appendChild(opt);
+        });
+        selectEl.appendChild(grp);
+      }
       if (smOnly.length > 0) {
         const grp = document.createElement("optgroup");
         grp.label = "Sauenmatrix-Hochsitze";
@@ -3563,19 +3591,16 @@
         showToast("⏸️ Bitte erst KI-Auswertung pausieren oder abwarten");
         return;
       }
-      const spotKey = document.getElementById("import-spot-select")?.value || "";
+      const spotSel = document.getElementById("import-spot-select");
+      let spotKey = spotSel?.value || "";
       if (!spotKey) {
-        const hasAnySpots = (document.getElementById("import-spot-select")?.options.length || 0) > 1;
-        if (hasAnySpots) {
-          showToast("📍 Bitte zuerst einen Standort auswählen");
-          document.getElementById("import-spot-select")?.focus();
-          return;
+        if (spotSel && Array.from(spotSel.options).some(o => o.value === REVIER_ALLGEMEIN_SPOT_KEY)) {
+          spotSel.value = REVIER_ALLGEMEIN_SPOT_KEY;
+          spotKey = REVIER_ALLGEMEIN_SPOT_KEY;
+          showToast("🌲 Ohne feste Kanzel: nutze „Revier allgemein“");
         }
-        if (!confirm("Es ist noch kein Standort angelegt. Trotzdem als „Unbekannter Standort“ importieren? (Besser erst unter „Kameras“ einen Platz anlegen.)")) {
-          switchTab("kameras");
-          return;
-        }
-      } else {
+      }
+      if (spotKey) {
         safeSetItem("ul_last_spot_key_v1", spotKey);
       }
       const targetId = mode === "filemanager" ? "batch-folder-input" : "batch-file-input";
@@ -3666,7 +3691,6 @@
       let flaggedCount = 0;
 
       for (const items of byBatch.values()) {
-        // Nur Stapel mit mind. 3 gültigen Zeitstempeln auswerten
         const valid = items.filter(it =>
           it.effectiveTs &&
           it.effectiveTs >= new Date(2020, 0, 1).getTime() &&
@@ -3680,7 +3704,6 @@
         const q3 = sortedTs[Math.floor(sortedTs.length * 0.75)];
         const coreSpreadDays = (q3 - q1) / DAY_MS;
 
-        // Wenn der Kern des Stapels kompakt ist (<= 40 Tage), Ausreißer (> 35 Tage vom Median) auf Gelb markieren
         const maxJumpDays = Math.max(35, coreSpreadDays * 2 + 20);
         for (const it of valid) {
           if (it.timeSource !== "INFOBAR_OCR") continue;
@@ -4429,7 +4452,7 @@
               isTrophy: { type: "BOOLEAN" },
               trophyType: {
                 type: "STRING",
-                enum: ["REHBOCK", "DAMHIRSCH", "ROTHIRSCH", "KEILER", ""]
+                enum: ["REHBOCK", "DAMHIRSCH", "ROTHIRSCH", "KEILER", "KEINE"]
               },
               trophyDetail: { type: "STRING" },
               boarBreakdown: {
@@ -4502,7 +4525,7 @@
             "   - DAMWILD (Damhirsch): Unterscheide nach Geweih-Ausprägung: kleine Spieße ('Spießer'), 'Knieper / Löffler', 'Halbschaufler', starke/große Schaufeln ('Starker Schaufler'). Setze isTrophy=true, trophyType='DAMHIRSCH', trophyDetail=<Beschreibung>.",
             "   - ROTWILD (Rothirsch): Unterscheide nach Geweih-Ausprägung: 'Spießer', 'Gabler', 'Sechser' / 'Achter' / 'Zehner', 'Kronenhirsch', 'Starkes Geweih'. Setze isTrophy=true, trophyType='ROTHIRSCH', trophyDetail=<Beschreibung>.",
             "   - SCHWARZWILD (Keiler): Achte sehr genau auf echte Keiler-Merkmale: sichtbare Waffen/Zähne (Gewehre/Haderer), typischer Keilerbuckel / markanter Doppelbuckel (Körperkontur), sichtbar ausgeprägte Klötze hinten (Hoden/Kurzwildbret) sowie Bauchpinsel. NUR wenn mindestens eines dieser Merkmale sichtbar ist: isTrophy=true, trophyType='KEILER' und in trophyDetail kurz nennen, woran erkannt (z. B. 'Keiler · Waffen & Pinsel', 'Keiler · Doppelbuckel & Klötze').",
-            "   - Wenn KEIN Trophäenträger erkennbar ist (oder bei weiblichem Wild/Jungwild/anderen Arten): isTrophy=false, trophyType='', trophyDetail=''.",
+            "   - Wenn KEIN Trophäenträger erkennbar ist (oder bei weiblichem Wild/Jungwild/anderen Arten): isTrophy=false, trophyType='KEINE', trophyDetail=''.",
             "5. Zähle bei totalCount das Maximum gleichzeitig sichtbarer Individuen auf EINEM Bild des Eintrags (nicht über Video-Frames addieren!).",
             "6. Bei SCHWARZWILD: Verteile totalCount auf boarBreakdown. Nur wenn Geschlecht/Klasse wirklich sicher erkennbar ist (z. B. Pinsel/Waffen/Klötze -> keiler, Striche/führend -> bache, typische Streifen/geringe Größe -> frischling), nutze exakte Klassen. Sonst grossUnklar, kleinUnklar oder unbekannt. Summe muss totalCount entsprechen; bei Nicht-Schwarzwild alle Werte 0.",
             "7. INFOBALKEN- & VIDEO-START-INFO-OCR (SEHR WICHTIG):",
@@ -4674,6 +4697,11 @@
       return (__aiWorkerState !== "STOPPING" && __aiWorkerState !== "PAUSING");
     }
 
+    function normalizeTrophyTypeVal(rawVal) {
+      const s = String(rawVal || "").trim().toUpperCase();
+      return ["REHBOCK", "DAMHIRSCH", "ROTHIRSCH", "KEILER"].includes(s) ? s : "";
+    }
+
     function applyAiResultToQueueItem(item, aiEntry, modelName) {
       const safeEntry = Object.assign({
         category: "UNKLAR",
@@ -4691,17 +4719,33 @@
         ocrCameraInfo: "",
         notes: "Bitte manuell prüfen"
       }, aiEntry || {});
-      safeEntry.isTrophy = Boolean(safeEntry.isTrophy);
-      safeEntry.trophyType = String(safeEntry.trophyType || "").trim();
-      safeEntry.trophyDetail = String(safeEntry.trophyDetail || "").trim();
+      safeEntry.trophyType = normalizeTrophyTypeVal(safeEntry.trophyType);
+      safeEntry.isTrophy = Boolean(safeEntry.isTrophy && (safeEntry.trophyType || safeEntry.trophyDetail));
+      if (!safeEntry.isTrophy) {
+        safeEntry.trophyType = "";
+        safeEntry.trophyDetail = "";
+      } else {
+        safeEntry.trophyDetail = String(safeEntry.trophyDetail || "").trim();
+      }
       safeEntry.ocrCameraInfo = String(safeEntry.ocrCameraInfo || "").trim();
 
-      // Zeitstempel-Rangfolge anwenden (Infobalken-OCR prüfen)
-      const ocrTsRaw = parseOcrDateToMs(safeEntry.ocrTimestamp);
+      // Zeitstempel-Rangfolge anwenden (Infobalken-OCR prüfen, inkl. Schutz gegen Zukunfts-Datumsdreher)
+      let ocrTsRaw = parseOcrDateToMs(safeEntry.ocrTimestamp);
       let ocrApplied = false;
       if (ocrTsRaw) {
         const minTs = new Date(2020, 0, 1).getTime();
         const maxTs = Date.now() + 24 * 3600 * 1000;
+        // Falls OCR-Datum durch TT/MM-Dreher in der Zukunft liegt, prüfen ob Tausch ein gültiges Datum der letzten 12 Monate ergibt
+        if (ocrTsRaw > maxTs) {
+          const dFut = new Date(ocrTsRaw);
+          const curD = dFut.getDate(), curM = dFut.getMonth() + 1;
+          if (curD <= 12 && curM <= 12 && curD !== curM) {
+            const swapped = new Date(dFut.getFullYear(), curD - 1, curM, dFut.getHours(), dFut.getMinutes(), dFut.getSeconds());
+            if (!isNaN(swapped.getTime()) && swapped.getTime() >= minTs && swapped.getTime() <= maxTs) {
+              ocrTsRaw = swapped.getTime();
+            }
+          }
+        }
         if (ocrTsRaw >= minTs && ocrTsRaw <= maxTs) {
           // Falls vorab per Batteriewechsel-Retter auf FILE_MTIME verschoben wurde, diesen Alt-Versatz nicht doppelt auf die echte Infobalken-Zeit addieren
           const appliedOffsetMs = (item.timeSource === "FILE_MTIME" && item.batchTimeFixed) ? 0 : (item.timeOffsetMs || 0);
@@ -5205,6 +5249,66 @@
       renderPruefenVisits(false);
     }
 
+    function canSwapDayMonthMs(ms) {
+      if (!ms || isNaN(ms)) return false;
+      const d = new Date(ms);
+      const day = d.getDate();
+      const mo = d.getMonth() + 1;
+      if (day > 12 || mo > 12 || day === mo) return false;
+      const test = new Date(d.getFullYear(), day - 1, mo, d.getHours(), d.getMinutes(), d.getSeconds());
+      return !isNaN(test.getTime()) && test.getMonth() === (day - 1) && test.getDate() === mo;
+    }
+
+    function swapDayMonthOnMs(ms) {
+      const d = new Date(ms);
+      const day = d.getDate();
+      const mo = d.getMonth() + 1;
+      if (day > 12 || mo > 12 || day === mo) return ms;
+      const swapped = new Date(d.getFullYear(), day - 1, mo, d.getHours(), d.getMinutes(), d.getSeconds());
+      return isNaN(swapped.getTime()) ? ms : swapped.getTime();
+    }
+
+    async function quickSwapVisitDayMonth(visitId) {
+      const v = await idbGet("visits", visitId).catch(() => null);
+      if (!v || !canSwapDayMonthMs(v.startTs)) {
+        showToast("ℹ️ Tag & Monat können für dieses Datum nicht getauscht werden");
+        return;
+      }
+      const oldStart = v.startTs;
+      const newStart = swapDayMonthOnMs(oldStart);
+      const durMs = Math.max(0, (v.endTs || oldStart) - oldStart);
+      v.startTs = newStart;
+      v.endTs = newStart + durMs;
+      v.manualEdited = true;
+      v.yellowReasons = (v.yellowReasons || []).filter(r => !/Datumssprung|Dreher|Zeitstempel/i.test(r));
+      if (v.reviewState === "OPEN" && v.yellowReasons.length === 0) {
+        v.ampel = "GREEN";
+      }
+      v.updatedAt = Date.now();
+      await idbPut("visits", v);
+
+      // Auch zugrundeliegende Queue-Items synchronisieren
+      for (const qid of (v.itemIds || [])) {
+        const q = await idbGet("queue", qid).catch(() => null);
+        if (q && canSwapDayMonthMs(q.effectiveTs)) {
+          q.effectiveTs = swapDayMonthOnMs(q.effectiveTs);
+          q.rawTs = q.effectiveTs;
+          q.timeOffsetMs = 0;
+          q.batchTimeFixed = true;
+          q.timeSuspect = false;
+          q.timeWarnReason = "";
+          await idbPut("queue", q);
+        }
+      }
+
+      const mRes = await mergeNearbyVisits({ onlyConfirmed: false, targetVisitId: v.id, silent: true });
+      await renderPruefenVisits();
+      await renderUebergabeView();
+      await refreshDiagnostics();
+      const mergedHint = mRes.removedVisitsCount > 0 ? ` & mit ${mRes.removedVisitsCount} Nachbar-Besuch verschmolzen` : "";
+      showToast(`🔄 Datum auf ${formatDateDE(newStart)} getauscht${mergedHint}`);
+    }
+
     function getVisitGapMinutes() {
       const v = Number(safeGetItem(VISIT_GAP_STORAGE, "15"));
       return [10, 15, 20, 30].includes(v) ? v : 15;
@@ -5493,7 +5597,7 @@
       const bestRes = bestItem.aiResult || {};
       const isTrophy = Boolean(bestTrophyItem);
       const trophyType = isTrophy
-        ? (String(bestTrophyItem.aiResult?.trophyType || "").trim() || defaultTrophyTypeForCategory(cat))
+        ? (normalizeTrophyTypeVal(bestTrophyItem.aiResult?.trophyType) || defaultTrophyTypeForCategory(cat))
         : "";
       const trophyDetail = isTrophy
         ? (String(bestTrophyItem.aiResult?.trophyDetail || "").trim() || getTrophyTypeLabelDE(trophyType))
@@ -5651,7 +5755,7 @@
         (String(c.trophyDetail || "").length > String(b.trophyDetail || "").length ? c : b),
         trophyVisits[0] || null
       );
-      const trophyType = isTrophy ? (topTrophyV?.trophyType || defaultTrophyTypeForCategory(base.category)) : "";
+      const trophyType = isTrophy ? (normalizeTrophyTypeVal(topTrophyV?.trophyType) || defaultTrophyTypeForCategory(base.category)) : "";
       const trophyDetail = isTrophy ? (topTrophyV?.trophyDetail || "") : "";
       const firstTrophyTag = sorted.find(v => v.trophyTag)?.trophyTag || "";
       const firstTrophyId = sorted.find(v => v.trophyId)?.trophyId || "";
@@ -6155,6 +6259,7 @@
           `
           : `
             <button type="button" class="btn-sm btn-yes" style="flex:1;" onclick="confirmVisit('${escapeHTML(v.id)}')">✅ Bestätigen</button>
+            ${(canSwapDayMonthMs(v.startTs) && (v.yellowReasons || []).some(r => /Datumssprung|Dreher/i.test(r))) ? `<button type="button" class="btn-sm btn-warn" onclick="quickSwapVisitDayMonth('${escapeHTML(v.id)}')" title="Tag und Monat tauschen">🔄 T↔M</button>` : ""}
             <button type="button" class="btn-sm btn-no" onclick="openLupeModal('${escapeHTML(v.id)}')">🔍 Lupe</button>
             <button type="button" class="btn-sm btn-no" onclick="openEditVisitModal('${escapeHTML(v.id)}')">✏️ Korrektur</button>
             <button type="button" class="btn-sm btn-danger" onclick="trashVisit('${escapeHTML(v.id)}')" title="In Papierkorb">🗑️</button>
@@ -6583,6 +6688,49 @@
       renderEditBoarSteppers();
     }
 
+    function syncSwapDateButtonUI() {
+      const btn = document.getElementById("ev-swap-dm-btn");
+      const dVal = document.getElementById("ev-date")?.value || "";
+      if (!btn) return;
+      const m = dVal.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) {
+        btn.disabled = true;
+        btn.textContent = "🔄 Tag ↔ Monat";
+        return;
+      }
+      const mo = Number(m[2]), day = Number(m[3]);
+      if (day <= 12 && mo <= 12 && day !== mo) {
+        const p = n => String(n).padStart(2, "0");
+        btn.disabled = false;
+        btn.textContent = `🔄 ${p(day)}.${p(mo)}. → ${p(mo)}.${p(day)}.`;
+      } else {
+        btn.disabled = true;
+        btn.textContent = "✓ Datum eindeutig";
+      }
+    }
+
+    function swapEditVisitDayMonth() {
+      const inp = document.getElementById("ev-date");
+      const dVal = inp?.value || "";
+      const m = dVal.match(/^(\d{4})-(\d{2})-(\d{2})$/);
+      if (!m) return;
+      const y = Number(m[1]), mo = Number(m[2]), day = Number(m[3]);
+      if (day > 12 || mo > 12 || day === mo) {
+        showToast("ℹ️ Tag & Monat können für dieses Datum nicht getauscht werden");
+        return;
+      }
+      const test = new Date(y, day - 1, mo, 12, 0, 0);
+      if (isNaN(test.getTime()) || test.getMonth() !== (day - 1) || test.getDate() !== mo) {
+        showToast("⚠️ Getauschtes Datum wäre ungültig");
+        return;
+      }
+      const p = n => String(n).padStart(2, "0");
+      inp.value = `${y}-${p(day)}-${p(mo)}`;
+      updateEditVisitDurationHint();
+      syncSwapDateButtonUI();
+      showToast(`🔄 Datum getauscht: ${p(mo)}.${p(day)}.${y}`);
+    }
+
     function populateTrophySelect(selectedIdOrTag = "") {
       const sel = document.getElementById("ev-trophy-select");
       if (!sel) return;
@@ -6707,7 +6855,12 @@
       document.getElementById("ev-notes").value = v.notes || "";
 
       const spotSel = document.getElementById("ev-spot-select");
-      await populateSpotSelect(spotSel, v.spotKey || "", true);
+      const customSpotInp = document.getElementById("ev-custom-spot");
+      const isCustomSpot = String(v.spotKey || "").startsWith("ul:custom:");
+      await populateSpotSelect(spotSel, isCustomSpot ? REVIER_ALLGEMEIN_SPOT_KEY : (v.spotKey || ""), true);
+      if (customSpotInp) {
+        customSpotInp.value = isCustomSpot ? (v.spotName || "") : "";
+      }
       populateRottenSelect(v.rottenTag || "");
 
       const isTr = Boolean(v.isTrophy);
@@ -6715,18 +6868,19 @@
       const trTypeSel = document.getElementById("ev-trophy-type");
       const trDetInp = document.getElementById("ev-trophy-detail");
       if (trChk) trChk.checked = isTr;
-      if (trTypeSel) trTypeSel.value = v.trophyType || (isTr ? defaultTrophyTypeForCategory(v.category) : "");
+      if (trTypeSel) trTypeSel.value = normalizeTrophyTypeVal(v.trophyType) || (isTr ? defaultTrophyTypeForCategory(v.category) : "");
       if (trDetInp) trDetInp.value = v.trophyDetail || "";
 
       __evBoarState = Object.assign(emptyBoarBreakdown(), v.boarBreakdown || {});
       onEditVisitCategoryChange();
       if (trTypeSel && (v.trophyType || isTr)) {
-        trTypeSel.value = v.trophyType || defaultTrophyTypeForCategory(v.category);
+        trTypeSel.value = normalizeTrophyTypeVal(v.trophyType) || defaultTrophyTypeForCategory(v.category);
       }
       populateTrophySelect(v.trophyId || v.trophyTag || "");
       onEditTrophyToggle();
       renderEditBoarSteppers();
       updateEditVisitDurationHint();
+      syncSwapDateButtonUI();
 
       document.getElementById("edit-visit-modal").classList.add("open");
     }
@@ -6763,7 +6917,12 @@
         }
       }
 
-      if (spot) {
+      const customSpotName = (document.getElementById("ev-custom-spot")?.value || "").trim();
+      if (customSpotName) {
+        v.spotKey = "ul:custom:" + customSpotName.toLowerCase().replace(/[^a-z0-9äöüß]+/g, "_");
+        v.spotName = customSpotName;
+        v.mappedKanzel = "";
+      } else if (spot) {
         v.spotKey = spot.key;
         v.spotName = spot.name;
         v.mappedKanzel = spot.mappedKanzel || "";
@@ -6778,7 +6937,7 @@
       const isTrophyChecked = supportsTrophy && Boolean(document.getElementById("ev-is-trophy")?.checked);
       v.isTrophy = isTrophyChecked;
       if (isTrophyChecked) {
-        v.trophyType = (document.getElementById("ev-trophy-type")?.value || "").trim() || defaultTrophyTypeForCategory(cat);
+        v.trophyType = normalizeTrophyTypeVal(document.getElementById("ev-trophy-type")?.value) || defaultTrophyTypeForCategory(cat);
         v.trophyDetail = (document.getElementById("ev-trophy-detail")?.value || "").trim();
         const trSel = document.getElementById("ev-trophy-select");
         const selVal = (trSel?.value || "").trim();
@@ -7295,7 +7454,7 @@
     }
 
     // =========================================================================
-    // 11B. DURCHREICHE (sm_cam_inbox_v1), REVIERBERICHT & BACKUP (ETAPPE 5 / v0.5.5)
+    // 11B. DURCHREICHE (sm_cam_inbox_v1), REVIERBERICHT & BACKUP (ETAPPE 5 / v0.5.6)
     // =========================================================================
     const SM_CAM_INBOX_KEY = "sm_cam_inbox_v1";
     const BEIFANG_TRANSFER_CATEGORIES = new Set([
@@ -7412,11 +7571,11 @@
       const cat = v.category || "SCHWARZWILD";
       const isSw = cat === "SCHWARZWILD";
       const b = isSw ? Object.assign(emptyBoarBreakdown(), v.boarBreakdown || {}) : emptyBoarBreakdown();
-      const targetKanzel = (v.mappedKanzel || v.spotName || "Unbekannt").trim();
+      const targetKanzel = (v.mappedKanzel || v.spotName || "Revier allgemein").trim();
       const files = Array.isArray(v.fileNames) ? v.fileNames : [];
       const spDetail = (v.speciesDetail || getCategoryLabelDE(cat).replace(/^[^\s]+\s/, "")).trim();
       const isTrophy = Boolean(v.isTrophy);
-      const trophyType = isTrophy ? (String(v.trophyType || "").trim() || defaultTrophyTypeForCategory(cat)) : "";
+      const trophyType = isTrophy ? (normalizeTrophyTypeVal(v.trophyType) || defaultTrophyTypeForCategory(cat)) : "";
       const trophyDetail = isTrophy ? String(v.trophyDetail || "").trim() : "";
       const trophyTag = isTrophy ? String(v.trophyTag || "").trim() : "";
       const trophyId = isTrophy ? String(v.trophyId || "").trim() : "";
@@ -7440,7 +7599,7 @@
         inboxId: `ul_${v.id}`,
         visitId: v.id,
         source: "UEBERLAEUFER",
-        sourceVersion: "0.5.5",
+        sourceVersion: "0.5.6",
         createdAt: Date.now(),
         status: isSw ? (statusVal || "GREEN") : (statusVal || "BEIFANG"),
         category: cat,
@@ -7588,8 +7747,9 @@
           if (mergeBarEl) mergeBarEl.style.display = readySw.length > 1 ? "block" : "none";
           readyListEl.innerHTML = readySw.map(v => {
             const targetKanzel = v.mappedKanzel || "";
-            const effectiveTarget = targetKanzel || v.spotName || "Unbekannt";
+            const effectiveTarget = targetKanzel || v.spotName || "Revier allgemein";
             const possibleDup = findPossibleSauenmatrixDuplicate(v, effectiveTarget);
+            const isFlexSpot = isFlexibleNoKanzelSpotKey(v.spotKey);
             const needsTargetMap = !targetKanzel && smSpots.length > 0;
             const boarTxt = formatBoarBreakdownText(v.boarBreakdown) || `${v.maxCount || 0}× Schwarzwild`;
             const timeRange = formatTimeHHMM(v.startTs) === formatTimeHHMM(v.endTs)
@@ -7598,15 +7758,15 @@
 
             const mapSelectHtml = needsTargetMap ? `
               <div style="margin-top:4px;">
-                <select class="app-select" style="padding:6px 8px; font-size:0.75rem; border-color:var(--accent-yellow);" onchange="assignVisitTargetKanzel('${escapeHTML(v.id)}', this.value)">
-                  <option value="">⚠️ Ziel-Kanzel für Sauenmatrix wählen (oder „${escapeHTML(v.spotName)}“ nutzen)</option>
+                <select class="app-select" style="padding:6px 8px; font-size:0.75rem; border-color:${isFlexSpot ? "#385e46" : "var(--accent-yellow)"};" onchange="assignVisitTargetKanzel('${escapeHTML(v.id)}', this.value)">
+                  <option value="">${isFlexSpot ? `Optional: Ziel-Kanzel zuordnen (sonst „${escapeHTML(effectiveTarget)}“)` : `⚠️ Ziel-Kanzel für Sauenmatrix wählen (oder „${escapeHTML(v.spotName)}“ nutzen)`}</option>
                   ${smSpots.map(s => `<option value="${escapeHTML(s.name)}">→ ${escapeHTML(s.name)} (${s.type === "FREIFLAECHE" ? "Freifläche" : "Kirrung"})</option>`).join("")}
                 </select>
               </div>
             ` : "";
 
             return `
-              <div class="ueb-card ${(possibleDup || needsTargetMap) ? "warn-dup" : ""}">
+              <div class="ueb-card ${(possibleDup || (needsTargetMap && !isFlexSpot)) ? "warn-dup" : ""}">
                 <div class="ueb-card-top">
                   <input type="checkbox" class="ueb-check ueb-visit-check" data-visit-id="${escapeHTML(v.id)}" ${possibleDup ? "" : "checked"} onchange="updateUebergabeSelectedCounts()">
                   <div style="flex:1; min-width:0; font-size:0.76rem; line-height:1.4;">
@@ -7637,7 +7797,7 @@
         }
       }
 
-      // 1B. Liste bereiter Beifang-Besuche (getrennt von Schwarzwild, inkl. sm_beifang_v1 Dublettenschutz)
+      // 1B. Liste bereiter Beifang-Besuche (getrennt von Schwarzwild, inkl. sm_beifang_v1 Dublettenschutz & Revier-allgemein ohne Zwangskanzel)
       const bycatchListEl = document.getElementById("ueb-bycatch-ready-list");
       const bycatchSendBar = document.getElementById("ueb-bycatch-send-bar");
       if (bycatchListEl) {
@@ -7649,8 +7809,9 @@
           if (bycatchSendBar) bycatchSendBar.style.display = "flex";
           bycatchListEl.innerHTML = readyBycatch.map(v => {
             const targetKanzel = v.mappedKanzel || "";
-            const effectiveTarget = targetKanzel || v.spotName || "Unbekannt";
+            const effectiveTarget = targetKanzel || v.spotName || "Revier allgemein";
             const possibleDup = findPossibleBeifangDuplicate(v, effectiveTarget);
+            const isFlexSpot = isFlexibleNoKanzelSpotKey(v.spotKey);
             const needsTargetMap = !targetKanzel && smSpots.length > 0;
             const isSpecialAlert = ["WOLF", "SCHAKAL", "WILDKATZE", "BESONDERES"].includes(v.category);
             const timeRange = formatTimeHHMM(v.startTs) === formatTimeHHMM(v.endTs)
@@ -7660,15 +7821,15 @@
 
             const mapSelectHtml = needsTargetMap ? `
               <div style="margin-top:4px;">
-                <select class="app-select" style="padding:6px 8px; font-size:0.75rem; border-color:${isSpecialAlert ? "var(--accent-red)" : "var(--accent-yellow)"};" onchange="assignVisitTargetKanzel('${escapeHTML(v.id)}', this.value)">
-                  <option value="">${isSpecialAlert ? "🚨 Wichtige Sichtung: Ziel-Kanzel für Sauenmatrix zuordnen" : `⚠️ Ziel-Kanzel für Sauenmatrix wählen (oder „${escapeHTML(v.spotName)}“ nutzen)`}</option>
+                <select class="app-select" style="padding:6px 8px; font-size:0.75rem; border-color:${isFlexSpot ? "#385e46" : "var(--accent-yellow)"};" onchange="assignVisitTargetKanzel('${escapeHTML(v.id)}', this.value)">
+                  <option value="">${isFlexSpot ? `Optional: festen Sitz zuordnen (sonst „${escapeHTML(effectiveTarget)}“ behalten)` : `Optional: Ziel-Kanzel wählen (sonst „${escapeHTML(v.spotName)}“ nutzen)`}</option>
                   ${smSpots.map(s => `<option value="${escapeHTML(s.name)}">→ ${escapeHTML(s.name)} (${s.type === "FREIFLAECHE" ? "Freifläche" : "Kirrung"})</option>`).join("")}
                 </select>
               </div>
             ` : "";
 
             return `
-              <div class="ueb-card ${(possibleDup || needsTargetMap) ? "warn-dup" : ""}" style="border-left-color:${(isSpecialAlert || v.category === "STOERUNG") ? "var(--accent-red)" : "var(--accent-yellow)"};">
+              <div class="ueb-card ${possibleDup ? "warn-dup" : ""}" style="border-left-color:${(isSpecialAlert || v.category === "STOERUNG") ? "var(--accent-red)" : "var(--accent-yellow)"};">
                 <div class="ueb-card-top">
                   <input type="checkbox" class="ueb-check ueb-bycatch-check" data-visit-id="${escapeHTML(v.id)}" ${possibleDup ? "" : "checked"} onchange="updateUebergabeSelectedCounts()">
                   <div style="flex:1; min-width:0; font-size:0.76rem; line-height:1.4;">
@@ -7974,7 +8135,7 @@
 
       const payload = {
         app: "Ueberlaeufer",
-        version: "0.5.5",
+        version: "0.5.6",
         exportedAt: new Date().toISOString(),
         preferences: {
           packSize: getPackSizePref(),

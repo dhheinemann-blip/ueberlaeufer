@@ -11,7 +11,7 @@
   <link id="dynamic-favicon" rel="icon" type="image/png">
   <link id="dynamic-touch-icon" rel="apple-touch-icon">
   <link id="dynamic-manifest" rel="manifest">
-  <title>Überläufer v0.5.4 – SD-Kamera KI-Auswerter</title>
+  <title>Überläufer v0.5.5 – SD-Kamera KI-Auswerter</title>
   <style>
     :root {
       --bg-main: #0b130e;
@@ -117,6 +117,11 @@
       align-items: center;
       justify-content: center;
       cursor: pointer;
+      opacity: 0;
+      transition: opacity 0.14s ease;
+    }
+    #home-logo-wrap.logo-ready {
+      opacity: 1;
     }
     #home-logo-wrap:active {
       transform: scale(0.97);
@@ -1363,6 +1368,98 @@
       -webkit-user-select: text !important;
     }
 
+
+    /* ===================================================================== */
+    /* v0.5.5: TROPHÄENTRÄGER, WILDARTEN-BADGES & ENTSCHLACKTE ÜBERGABE      */
+    /* ===================================================================== */
+    .pill-trophy {
+      background: rgba(244, 196, 48, 0.24);
+      color: #fff0a8;
+      border: 1px solid rgba(244, 196, 48, 0.85);
+    }
+    .visit-card.v-trophy {
+      border-color: rgba(244, 196, 48, 0.65);
+      box-shadow: 0 0 0 1px rgba(244, 196, 48, 0.18);
+    }
+    .visit-trophy-strip {
+      background: linear-gradient(90deg, rgba(244, 196, 48, 0.22), rgba(244, 196, 48, 0.08));
+      border: 1px solid rgba(244, 196, 48, 0.72);
+      border-radius: 9px;
+      padding: 5px 8px;
+      font-size: 0.72rem;
+      font-weight: 800;
+      color: #fff3b8;
+    }
+    .trophy-filter-btn {
+      width: 100%;
+      background: #102016;
+      color: #ffe899;
+      border: 1.5px solid rgba(244, 196, 48, 0.45);
+      border-radius: 11px;
+      padding: 7px 10px;
+      font-size: 0.76rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+    }
+    .trophy-filter-btn.active {
+      background: rgba(244, 196, 48, 0.24);
+      border-color: var(--accent-yellow);
+      color: #fff6c9;
+      box-shadow: 0 0 10px rgba(244, 196, 48, 0.22);
+    }
+    .ueb-top-controls {
+      display: flex;
+      flex-direction: column;
+      gap: 7px;
+      margin-bottom: 10px;
+    }
+    .ueb-select-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 6px;
+      flex-wrap: wrap;
+      background: rgba(11, 19, 14, 0.55);
+      border: 1px solid rgba(67, 135, 93, 0.45);
+      border-radius: 11px;
+      padding: 6px 9px;
+      font-size: 0.73rem;
+      color: #dceee2;
+    }
+    .ueb-collapse-btn {
+      width: 100%;
+      background: rgba(11, 19, 14, 0.65);
+      color: #e6f5ea;
+      border: 1.5px solid #356347;
+      border-radius: 12px;
+      padding: 9px 11px;
+      font-size: 0.78rem;
+      font-weight: 800;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      margin-bottom: 8px;
+    }
+    .ueb-collapse-btn:active {
+      transform: scale(0.99);
+    }
+    .ueb-collapse-btn.is-bycatch {
+      border-color: rgba(244, 196, 48, 0.5);
+      color: #fff0b8;
+    }
+    .ev-trophy-box {
+      background: rgba(244, 196, 48, 0.08);
+      border: 1.5px solid rgba(244, 196, 48, 0.55);
+      border-radius: 13px;
+      padding: 10px;
+      margin-bottom: 10px;
+    }
   </style>
 </head>
 <body class="home-mode">
@@ -1382,7 +1479,7 @@
 
     <div id="home-logo-wrap" onclick="switchTab('import')" title="Zum SD-Stapel-Import"></div>
     <div class="home-brand-title">Überläufer</div>
-    <div class="home-brand-sub">SD-Kamera KI-Auswerter · v0.5.4</div>
+    <div class="home-brand-sub">SD-Kamera KI-Auswerter · v0.5.5</div>
 
     <div class="home-status-pill" onclick="switchTab('kameras')" id="home-status-pill">
       <span class="status-dot" id="home-sm-dot"></span>
@@ -1400,7 +1497,7 @@
   <header class="app-header">
     <div class="header-left">
       <div class="header-top-row">
-        <span class="header-title-pill">🐗 Überläufer <span style="font-size:0.68rem; color:var(--accent-green);">v0.5.4</span></span>
+        <span class="header-title-pill">🐗 Überläufer <span style="font-size:0.68rem; color:var(--accent-green);">v0.5.5</span></span>
         <button type="button" class="icon-pill-btn" id="btn-night-dim" onclick="toggleNightDim()" title="Nacht-Dimmung">🌙</button>
         <span class="status-badge" id="header-db-badge">
           <span class="status-dot" id="header-db-dot"></span>
@@ -1671,6 +1768,14 @@
           </button>
         </div>
 
+        <!-- Schnell-Filter für Trophäenträger -->
+        <div id="pruefen-trophy-filter-wrap" style="margin:6px 0 6px;">
+          <button type="button" class="trophy-filter-btn" id="btn-pruefen-trophy-only" onclick="togglePruefenTrophyFilter()">
+            <span>🏆 Nur Trophäenträger</span>
+            <span class="pill pill-yellow" id="cnt-pruefen-trophies">0</span>
+          </button>
+        </div>
+
         <!-- Kontext-Aktionsleiste je Ampel-Filter -->
         <div id="pruefen-context-bar" style="display:none; margin-top:4px; gap:7px; flex-wrap:wrap;"></div>
       </div>
@@ -1750,6 +1855,15 @@
         <div class="tile-sub" id="sm-rotten-preview">Noch keine Rotten-Steckbriefe im gemeinsamen Speicher erkannt.</div>
       </div>
 
+      <!-- 5. Ausgelesene Trophäen-Steckbriefe (rein lesend aus Sauenmatrix v27.0) -->
+      <div class="tile-dark">
+        <div class="tile-title-row" style="margin-bottom:4px;">
+          <span class="tile-title" style="font-size:0.86rem;">🏆 Trophäen-Steckbriefe (<code>sm_trophaeen_v1</code>)</span>
+          <span class="pill pill-yellow" id="sm-trophaeen-badge">0 gefunden</span>
+        </div>
+        <div class="tile-sub" id="sm-trophaeen-preview">Noch keine Trophäen-Steckbriefe im gemeinsamen Speicher erkannt.</div>
+      </div>
+
     </section>
   </main>
 
@@ -1759,14 +1873,14 @@
   <main id="tab-uebergabe" class="tab-section">
     <section class="single-tab-page">
 
-      <!-- 1. Bereite Schwarzwild-Besuche für die Durchreiche -->
+      <!-- 1. Bereite Schwarzwild-Besuche für die Durchreiche (Buttons direkt oben!) -->
       <div class="tile-green">
         <div class="tile-title-row" style="margin-bottom:6px;">
           <span class="tile-title">📤 Durchreiche zur Sauenmatrix</span>
           <span class="pill pill-green" id="ueb-ready-pill">0 bereit</span>
         </div>
         <p class="tile-sub" style="margin-bottom:10px;">
-          Bestätigte <strong>Schwarzwild-Besuche</strong> werden als winziges Textpaket (ohne Bilder) in den gemeinsamen Posteingang <code>sm_cam_inbox_v1</code> gelegt. Dein Sauenmatrix-Tagebuch wird dabei niemals direkt überschrieben.
+          Bestätigte <strong>Schwarzwild-Besuche</strong> (inkl. Keiler-Trophäen) werden als winziges Textpaket in <code>sm_cam_inbox_v1</code> gelegt. Dein Sauenmatrix-Tagebuch wird dabei niemals direkt überschrieben.
         </p>
 
         <div class="stat-grid-3" style="margin-bottom:11px;">
@@ -1784,17 +1898,10 @@
           </div>
         </div>
 
-        <div id="ueb-ready-list"></div>
-
-        <div id="ueb-merge-bar" style="display:none; margin-top:8px;">
-          <button type="button" class="btn-sm btn-warn" style="width:100%; padding:9px;" onclick="mergeNearbyVisitsManually(true)">
-            🔗 Benachbarte Besuche nach Lückenregel verschmelzen
-          </button>
-        </div>
-
-        <div id="ueb-send-bar" style="display:none; margin-top:10px; flex-direction:column; gap:7px;">
+        <!-- Übergabe-Buttons für Schwarzwild direkt oben unter den Zählern -->
+        <div id="ueb-send-bar" class="ueb-top-controls" style="display:none;">
           <div style="display:flex; gap:8px; align-items:center;">
-            <label class="app-label" style="margin-bottom:0; flex:1;" for="ueb-default-status">Sauenmatrix-Status für Übergabe:</label>
+            <label class="app-label" style="margin-bottom:0; flex:1;" for="ueb-default-status">Sauenmatrix-Status:</label>
             <select id="ueb-default-status" class="app-select" style="width:auto; padding:6px 10px; font-size:0.78rem;">
               <option value="GREEN" selected>🟢 GREEN (Sauen da)</option>
               <option value="BLUE">🔵 BLUE (Bewegung/Wechsel)</option>
@@ -1802,28 +1909,58 @@
             </select>
           </div>
           <button type="button" class="btn-hero" id="btn-push-inbox" onclick="pushSelectedVisitsToInbox()">
-            📤 Schwarzwild in Durchreiche legen (sm_cam_inbox_v1)
+            📤 Schwarzwild in Durchreiche legen
           </button>
+          <div class="ueb-select-row">
+            <span id="ueb-sw-sel-summary">0 ausgewählt</span>
+            <div style="display:flex; gap:5px;">
+              <button type="button" class="btn-sm btn-no" style="padding:4px 8px; font-size:0.7rem;" onclick="toggleAllUebergabeChecks('sw', true)">Alle</button>
+              <button type="button" class="btn-sm btn-no" style="padding:4px 8px; font-size:0.7rem;" onclick="toggleAllUebergabeChecks('sw', false)">Keine</button>
+            </div>
+          </div>
+          <div id="ueb-merge-bar" style="display:none;">
+            <button type="button" class="btn-sm btn-warn" style="width:100%; padding:8px;" onclick="mergeNearbyVisitsManually(true)">
+              🔗 Benachbarte SW-Besuche verschmelzen
+            </button>
+          </div>
         </div>
+
+        <button type="button" class="ueb-collapse-btn" id="ueb-ready-toggle-btn" style="display:none;" onclick="toggleUebergabeListCollapse('sw')">
+          <span id="ueb-ready-toggle-label">📋 Schwarzwild-Liste anzeigen</span>
+          <span id="ueb-ready-toggle-arrow">▸</span>
+        </button>
+        <div id="ueb-ready-list"></div>
       </div>
 
-      <!-- 1B. Bestätigte Beifänge getrennt übergebbar (Reh, Damwild, Raubwild, Wolf, Störung) -->
+      <!-- 1B. Bestätigte Beifänge 1:1 zur Sauenmatrix v27.0 (Buttons direkt oben!) -->
       <div class="tile-dark" style="border-color:var(--tile-olive-border);">
         <div class="tile-title-row" style="margin-bottom:6px;">
-          <span class="tile-title">🦌 Beifang-Durchreiche (vorbereitet)</span>
+          <span class="tile-title">🦌 Beifang- &amp; Trophäen-Durchreiche</span>
           <span class="pill pill-yellow" id="ueb-bycatch-ready-pill">0 bereit</span>
         </div>
         <p class="tile-sub" style="margin-bottom:10px;">
-          Bestätigte Sichtungen aus <strong>Rehwild, Damwild, Raubwild, Wolf &amp; Störungen</strong> – sauber getrennt von Schwarzwild, mit <code>category</code> &amp; <code>speciesDetail</code> im Paket für den kommenden Beifang-Reiter in der Sauenmatrix.
+          <strong>Rotwild, Damwild, Rehwild, Raubwild</strong> (Fuchs, Dachs, Marder, Marderhund/Enok, Waschbär), <strong>Goldschakal, Wildkatze, Wolf, Störungen &amp; Besonderes</strong> inkl. Trophäen-Verknüpfung &amp; Dubletten-Schutz gegen <code>sm_beifang_v1</code> (Hase &amp; Vogel bleiben lokal).
         </p>
 
-        <div id="ueb-bycatch-ready-list"></div>
-
-        <div id="ueb-bycatch-send-bar" style="display:none; margin-top:10px; flex-direction:column; gap:7px;">
+        <!-- Übergabe-Buttons für Beifang direkt oben -->
+        <div id="ueb-bycatch-send-bar" class="ueb-top-controls" style="display:none;">
           <button type="button" class="btn-sm btn-warn" id="btn-push-bycatch-inbox" style="width:100%; padding:11px; font-size:0.86rem;" onclick="pushSelectedBycatchToInbox()">
-            📤 Ausgewählte Beifänge in Durchreiche legen (sm_cam_inbox_v1)
+            📤 Ausgewählte Beifänge in Durchreiche legen
           </button>
+          <div class="ueb-select-row">
+            <span id="ueb-bycatch-sel-summary">0 ausgewählt</span>
+            <div style="display:flex; gap:5px;">
+              <button type="button" class="btn-sm btn-no" style="padding:4px 8px; font-size:0.7rem;" onclick="toggleAllUebergabeChecks('bycatch', true)">Alle</button>
+              <button type="button" class="btn-sm btn-no" style="padding:4px 8px; font-size:0.7rem;" onclick="toggleAllUebergabeChecks('bycatch', false)">Keine</button>
+            </div>
+          </div>
         </div>
+
+        <button type="button" class="ueb-collapse-btn is-bycatch" id="ueb-bycatch-toggle-btn" style="display:none;" onclick="toggleUebergabeListCollapse('bycatch')">
+          <span id="ueb-bycatch-toggle-label">📋 Beifang-Liste anzeigen</span>
+          <span id="ueb-bycatch-toggle-arrow">▸</span>
+        </button>
+        <div id="ueb-bycatch-ready-list"></div>
       </div>
 
       <!-- 2. Aktueller Posteingang (sm_cam_inbox_v1) -->
@@ -2027,7 +2164,7 @@
       <div class="tile-dark">
         <div class="tile-title-row" style="margin-bottom:6px;">
           <span class="tile-title" style="font-size:0.88rem;">🛠️ System &amp; Version</span>
-          <span class="pill pill-green">Überläufer v0.5.4</span>
+          <span class="pill pill-green">Überläufer v0.5.5</span>
         </div>
         <div class="tile-sub" id="setup-system-info">
           IndexedDB: prüfe…
@@ -2071,6 +2208,7 @@
             <option value="auto">Automatisch</option>
             <option value="bottom">Unten (Standard)</option>
             <option value="top">Oben</option>
+            <option value="intro">Video-Start-Tafel (1. Sekunde)</option>
             <option value="none">Kein Balken</option>
           </select>
         </div>
@@ -2257,13 +2395,17 @@
           <label class="app-label" for="ev-category">Wildart / Kategorie</label>
           <select id="ev-category" class="app-select" onchange="onEditVisitCategoryChange()">
             <option value="SCHWARZWILD">🐗 Schwarzwild</option>
-            <option value="REHWILD">🦌 Rehwild</option>
+            <option value="ROTWILD">🦌 Rotwild</option>
             <option value="DAMWILD">🦌 Damwild</option>
-            <option value="RAUBWILD">🦊 Raub- / Kleinwild</option>
+            <option value="REHWILD">🦌 Rehwild</option>
+            <option value="RAUBWILD">🦊 Raubwild (Fuchs/Dachs/Marder/Enok/Waschbär)</option>
+            <option value="SCHAKAL">🦊 Goldschakal</option>
+            <option value="WILDKATZE">🐱 Wildkatze</option>
             <option value="WOLF">🐺 Wolf</option>
-            <option value="HAUSTIER">🐕 Hund / Katze</option>
-            <option value="VOGEL">🦅 Vogel</option>
-            <option value="STOERUNG">🚶 Mensch / Fahrzeug</option>
+            <option value="STOERUNG">🚶 Störung (Mensch / Fahrzeug)</option>
+            <option value="BESONDERES">✨ Besonderes / Sonstiges</option>
+            <option value="HAUSTIER">🐕 Hund / Hauskatze (nur lokal)</option>
+            <option value="VOGEL">🦅 Vogel (nur lokal)</option>
             <option value="UNKLAR">❓ Unklar</option>
             <option value="LEERBILD">🗑️ Leerbild</option>
           </select>
@@ -2380,6 +2522,38 @@
           <select id="ev-rotten-select" class="app-select" style="padding:7px 9px; font-size:0.8rem;">
             <option value="">— Kein Rotten-Tag —</option>
           </select>
+        </div>
+      </div>
+
+      <!-- Trophäenträger-Panel (Rehbock, Damhirsch, Rothirsch, Keiler + sm_trophaeen_v1) -->
+      <div id="ev-trophy-panel" class="ev-trophy-box">
+        <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; font-weight:900; color:#fff0a8; cursor:pointer;">
+          <input type="checkbox" id="ev-is-trophy" style="width:18px; height:18px; accent-color:var(--accent-yellow);" onchange="onEditTrophyToggle()">
+          🏆 Trophäenträger (Rehbock / Hirsch / Keiler)
+        </label>
+        <div id="ev-trophy-fields" style="display:none; margin-top:9px;">
+          <div class="form-grid-2 form-row">
+            <div>
+              <label class="app-label" for="ev-trophy-type" style="font-size:0.7rem;">Trophäen-Art</label>
+              <select id="ev-trophy-type" class="app-select" style="padding:7px 9px; font-size:0.8rem;" onchange="populateTrophySelect(document.getElementById('ev-trophy-select')?.value || '')">
+                <option value="">— Bitte wählen —</option>
+                <option value="REHBOCK">🦌 Rehbock</option>
+                <option value="DAMHIRSCH">🦌 Damhirsch</option>
+                <option value="ROTHIRSCH">🦌 Rothirsch</option>
+                <option value="KEILER">🐗 Keiler</option>
+              </select>
+            </div>
+            <div>
+              <label class="app-label" for="ev-trophy-detail" style="font-size:0.7rem;">Merkmale (Geweih / Waffen)</label>
+              <input type="text" id="ev-trophy-detail" class="app-input" style="padding:7px 9px; font-size:0.8rem;" placeholder="z. B. Ungerader 6er, Waffen &amp; Klötze">
+            </div>
+          </div>
+          <div>
+            <label class="app-label" for="ev-trophy-select" style="font-size:0.7rem;">Trophäen-Steckbrief aus Sauenmatrix (<code>sm_trophaeen_v1</code>, optional)</label>
+            <select id="ev-trophy-select" class="app-select" style="padding:7px 9px; font-size:0.8rem;">
+              <option value="">— Kein Trophäen-Steckbrief —</option>
+            </select>
+          </div>
         </div>
       </div>
 
@@ -2621,10 +2795,80 @@
     `;
 
     let __pendingLogoRawImage = null;
-    let __manifestObjectUrl = null;
+    let __defaultPngIconCache = null;
 
     function buildDefaultSvgDataUrl() {
       return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(DEFAULT_SVG_LOGO.trim());
+    }
+
+    function buildDefaultPngDataUrl() {
+      if (__defaultPngIconCache) return Promise.resolve(__defaultPngIconCache);
+      return new Promise((resolve) => {
+        try {
+          const img = new Image();
+          img.onload = () => {
+            try {
+              const c = document.createElement("canvas");
+              c.width = 512;
+              c.height = 512;
+              const ctx = c.getContext("2d");
+              ctx.fillStyle = "#0b130e";
+              ctx.fillRect(0, 0, 512, 512);
+              const pad = 34;
+              const ratio = Math.min((512 - pad * 2) / (img.width || 260), (512 - pad * 2) / (img.height || 220));
+              const dw = Math.round((img.width || 260) * ratio);
+              const dh = Math.round((img.height || 220) * ratio);
+              ctx.drawImage(img, Math.round((512 - dw) / 2), Math.round((512 - dh) / 2), dw, dh);
+              __defaultPngIconCache = c.toDataURL("image/png");
+              resolve(__defaultPngIconCache);
+            } catch (e) {
+              resolve(buildDefaultSvgDataUrl());
+            }
+          };
+          img.onerror = () => resolve(buildDefaultSvgDataUrl());
+          img.src = buildDefaultSvgDataUrl();
+        } catch (e) {
+          resolve(buildDefaultSvgDataUrl());
+        }
+      });
+    }
+
+    function updatePwaManifestWithIcon(iconUrl, isPng) {
+      const fav = document.getElementById("dynamic-favicon");
+      const touch = document.getElementById("dynamic-touch-icon");
+      const manif = document.getElementById("dynamic-manifest");
+      if (fav) fav.href = iconUrl;
+      if (touch) touch.href = iconUrl;
+      if (!manif) return;
+
+      const hasHttpOrigin = window.location.origin && window.location.origin !== "null" && /^https?:/i.test(window.location.protocol);
+      const scopeUrl = hasHttpOrigin
+        ? (window.location.origin + window.location.pathname.replace(/[^/]*$/, ""))
+        : ".";
+      const startUrl = hasHttpOrigin
+        ? (window.location.origin + window.location.pathname)
+        : ".";
+      const iconType = isPng ? "image/png" : "image/svg+xml";
+
+      const manifestObj = {
+        id: scopeUrl,
+        name: "Überläufer – SD-Kamera Auswerter",
+        short_name: "Überläufer",
+        start_url: startUrl,
+        scope: scopeUrl,
+        display: "standalone",
+        display_override: ["standalone", "minimal-ui"],
+        orientation: "portrait",
+        background_color: "#0b130e",
+        theme_color: "#0b130e",
+        icons: isPng
+          ? [
+              { src: iconUrl, sizes: "192x192", type: "image/png", purpose: "any" },
+              { src: iconUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" }
+            ]
+          : [{ src: iconUrl, sizes: "512x512", type: iconType }]
+      };
+      manif.href = "data:application/manifest+json;charset=utf-8," + encodeURIComponent(JSON.stringify(manifestObj));
     }
 
     function applyLogoEverywhere(dataUrl = null) {
@@ -2636,6 +2880,8 @@
         const el = document.getElementById(id);
         if (el) el.innerHTML = html;
       });
+      const homeWrap = document.getElementById("home-logo-wrap");
+      if (homeWrap) homeWrap.classList.add("logo-ready");
 
       const pill = document.getElementById("logo-mode-pill");
       if (pill) {
@@ -2643,28 +2889,14 @@
         pill.className = dataUrl ? "pill pill-green" : "pill pill-blue";
       }
 
-      const iconUrl = dataUrl || buildDefaultSvgDataUrl();
-      const fav = document.getElementById("dynamic-favicon");
-      const touch = document.getElementById("dynamic-touch-icon");
-      const manif = document.getElementById("dynamic-manifest");
-      if (fav) fav.href = iconUrl;
-      if (touch) touch.href = iconUrl;
-      if (manif) {
-        const manifestObj = {
-          name: "Überläufer – SD-Kamera Auswerter",
-          short_name: "Überläufer",
-          start_url: ".",
-          display: "standalone",
-          background_color: "#0b130e",
-          theme_color: "#0b130e",
-          icons: [{ src: iconUrl, sizes: "512x512", type: dataUrl ? "image/png" : "image/svg+xml" }]
-        };
-        if (__manifestObjectUrl) {
-          try { URL.revokeObjectURL(__manifestObjectUrl); } catch (e) {}
-        }
-        const blob = new Blob([JSON.stringify(manifestObj)], { type: "application/json" });
-        __manifestObjectUrl = URL.createObjectURL(blob);
-        manif.href = __manifestObjectUrl;
+      if (dataUrl && dataUrl.startsWith("data:image/png")) {
+        updatePwaManifestWithIcon(dataUrl, true);
+      } else if (dataUrl) {
+        updatePwaManifestWithIcon(dataUrl, true);
+      } else {
+        buildDefaultPngDataUrl().then(pngUrl => {
+          updatePwaManifestWithIcon(pngUrl, pngUrl.startsWith("data:image/png"));
+        });
       }
     }
 
@@ -3198,6 +3430,19 @@
           rPrev.textContent = "Noch keine Rotten-Steckbriefe in sm_rotten_v1 gefunden.";
         }
       }
+
+      const trophaeen = readSauenmatrixTrophaeen();
+      const tBadge = document.getElementById("sm-trophaeen-badge");
+      const tPrev = document.getElementById("sm-trophaeen-preview");
+      if (tBadge) tBadge.textContent = `${trophaeen.length} gefunden`;
+      if (tPrev) {
+        if (trophaeen.length > 0) {
+          const tNames = trophaeen.map(t => `${t.name}${t.species ? " (" + getTrophyTypeLabelDE(t.species) + ")" : ""}`).slice(0, 8);
+          tPrev.textContent = `Erkannte Trophäenträger (im Korrektur-Dialog verknüpfbar): ${tNames.join(" · ")}`;
+        } else {
+          tPrev.textContent = "Noch keine Trophäen-Steckbriefe in sm_trophaeen_v1 gefunden.";
+        }
+      }
     }
 
     async function addExtraCameraSpot() {
@@ -3363,34 +3608,116 @@
       return isNaN(dt.getTime()) ? null : dt.getTime();
     }
 
-    // Parst OCR-Zeitstempel aus dem Kamera-Infobalken (YYYY-MM-DD, DD.MM.YYYY, MM/DD/YYYY inkl. AM/PM)
+    // Parst OCR-Zeitstempel aus dem Kamera-Infobalken (streng gegen TT.MM./MM.TT.-Dreher abgesichert)
     function parseOcrDateToMs(str) {
       if (!str || typeof str !== "string") return null;
       const clean = str.trim();
       let y, mo, d, hh, mm, ss, ampm = "";
-      let m = clean.match(/(20\d{2})[-./](\d{1,2})[-./](\d{1,2})[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*(AM|PM))?/i);
+      // 1. ISO-Format YYYY-MM-DD / YYYY/MM/DD / YYYY.MM.DD
+      let m = clean.match(/(20\d{2})([-./])(\d{1,2})\2(\d{1,2})[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*(AM|PM))?/i);
       if (m) {
-        y = Number(m[1]); mo = Number(m[2]); d = Number(m[3]);
-        hh = Number(m[4]); mm = Number(m[5]); ss = Number(m[6] || 0);
-        ampm = (m[7] || "").toUpperCase();
-      } else {
-        m = clean.match(/(\d{1,2})[-./](\d{1,2})[-./](20\d{2})[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*(AM|PM))?/i);
-        if (!m) return null;
-        let p1 = Number(m[1]), p2 = Number(m[2]);
-        y = Number(m[3]);
-        if (p1 <= 12 && p2 > 12) {
-          mo = p1; d = p2; // US-Format MM/DD/YYYY erkannt
-        } else {
-          d = p1; mo = p2; // Deutsches Format DD.MM.YYYY
+        y = Number(m[1]); mo = Number(m[3]); d = Number(m[4]);
+        hh = Number(m[5]); mm = Number(m[6]); ss = Number(m[7] || 0);
+        ampm = (m[8] || "").toUpperCase();
+        // Falls zweiter Wert > 12 und dritter <= 12 (z. B. fehlformatiertes YYYY-DD-MM), korrigieren
+        if (mo > 12 && d <= 12) {
+          const tmp = mo; mo = d; d = tmp;
         }
-        hh = Number(m[4]); mm = Number(m[5]); ss = Number(m[6] || 0);
-        ampm = (m[7] || "").toUpperCase();
+      } else {
+        // 2. Deutsches Format DD.MM.YYYY (Punkt trennt IMMER Tag.Monat.Jahr) oder Slash/Bindestrich
+        m = clean.match(/(\d{1,2})([-./])(\d{1,2})\2(20\d{2})[\sT]+(\d{1,2}):(\d{2})(?::(\d{2}))?(?:\s*(AM|PM))?/i);
+        if (!m) return null;
+        const p1 = Number(m[1]), sep = m[2], p2 = Number(m[3]);
+        y = Number(m[4]);
+        hh = Number(m[5]); mm = Number(m[6]); ss = Number(m[7] || 0);
+        ampm = (m[8] || "").toUpperCase();
+        if (sep === ".") {
+          // Punkt-Format: Deutsch TT.MM.JJJJ (nur falls Monat > 12 unmöglich wäre, tauschen)
+          if (p2 > 12 && p1 <= 12) { mo = p1; d = p2; }
+          else { d = p1; mo = p2; }
+        } else if (p1 <= 12 && p2 > 12) {
+          // Eindeutiges US-Format MM/DD/YYYY
+          mo = p1; d = p2;
+        } else {
+          // Im deutschen Revier bei Zweideutigkeit (beide <= 12) Standard DD/MM/YYYY bevorzugen
+          d = p1; mo = p2;
+        }
       }
       if (ampm === "PM" && hh >= 1 && hh < 12) hh += 12;
       if (ampm === "AM" && hh === 12) hh = 0;
       if (mo < 1 || mo > 12 || d < 1 || d > 31 || hh > 23 || mm > 59 || ss > 59) return null;
       const dt = new Date(y, mo - 1, d, hh, mm, ss);
-      return isNaN(dt.getTime()) ? null : dt.getTime();
+      if (isNaN(dt.getTime()) || dt.getMonth() !== (mo - 1) || dt.getDate() !== d) return null;
+      return dt.getTime();
+    }
+
+    // Prüft innerhalb eines Stapels (batchId), ob einzelne OCR-Daten unplausibel stark vom Rest des Stapels abweichen (z. B. 01.11. vs. 11.01.)
+    async function flagBatchDateOutliers(targetBatchIds = null) {
+      const allQueue = await idbGetAll("queue").catch(() => []);
+      const byBatch = new Map();
+      for (const it of allQueue) {
+        if (it.status !== "DONE" || !it.batchId || !it.effectiveTs || it.batchTimeFixed) continue;
+        if (targetBatchIds && !targetBatchIds.has(it.batchId)) continue;
+        if (!byBatch.has(it.batchId)) byBatch.set(it.batchId, []);
+        byBatch.get(it.batchId).push(it);
+      }
+
+      const DAY_MS = 86400000;
+      let flaggedCount = 0;
+
+      for (const items of byBatch.values()) {
+        // Nur Stapel mit mind. 3 gültigen Zeitstempeln auswerten
+        const valid = items.filter(it =>
+          it.effectiveTs &&
+          it.effectiveTs >= new Date(2020, 0, 1).getTime() &&
+          (it.timeSource === "INFOBAR_OCR" || it.timeSource === "EXIF" || it.timeSource === "FILENAME")
+        );
+        if (valid.length < 3) continue;
+
+        const sortedTs = valid.map(x => x.effectiveTs).sort((a, b) => a - b);
+        const medianTs = sortedTs[Math.floor(sortedTs.length / 2)];
+        const q1 = sortedTs[Math.floor(sortedTs.length * 0.25)];
+        const q3 = sortedTs[Math.floor(sortedTs.length * 0.75)];
+        const coreSpreadDays = (q3 - q1) / DAY_MS;
+
+        // Wenn der Kern des Stapels kompakt ist (<= 40 Tage), Ausreißer (> 35 Tage vom Median) auf Gelb markieren
+        const maxJumpDays = Math.max(35, coreSpreadDays * 2 + 20);
+        for (const it of valid) {
+          if (it.timeSource !== "INFOBAR_OCR") continue;
+          const diffDays = Math.abs(it.effectiveTs - medianTs) / DAY_MS;
+          if (diffDays > maxJumpDays) {
+            const dObj = new Date(it.effectiveTs);
+            const curD = dObj.getDate();
+            const curM = dObj.getMonth() + 1;
+            let swapNote = "";
+            if (curD <= 12 && curM <= 12 && curD !== curM) {
+              const swapped = new Date(dObj.getFullYear(), curD - 1, curM, dObj.getHours(), dObj.getMinutes(), dObj.getSeconds());
+              if (!isNaN(swapped.getTime()) && Math.abs(swapped.getTime() - medianTs) / DAY_MS <= 25) {
+                swapNote = " (mögl. TT.MM./MM.TT.-Dreher!)";
+              }
+            }
+            const reason = `Datumssprung im Stapel (${Math.round(diffDays)} Tg. abw.)${swapNote}`;
+            if (!it.timeSuspect || it.timeWarnReason !== reason) {
+              it.timeSuspect = true;
+              it.timeWarnReason = reason;
+              await idbPut("queue", it);
+              flaggedCount++;
+            }
+          }
+        }
+      }
+      return flaggedCount;
+    }
+
+    // Bereinigt ocrTempC sauber auf eine reine Zahl für Sauenmatrix v27.0 (z. B. "4°C" -> 4, "-2,5 °C" -> -2.5)
+    function parseCleanTempNumber(rawTemp) {
+      if (rawTemp === null || rawTemp === undefined || rawTemp === "") return "";
+      if (typeof rawTemp === "number" && !isNaN(rawTemp)) return rawTemp;
+      const m = String(rawTemp).replace(",", ".").match(/-?\d+(?:\.\d+)?/);
+      if (!m) return "";
+      const n = Number(m[0]);
+      if (isNaN(n) || n < -40 || n > 60) return "";
+      return n;
     }
 
     function checkTimestampPlausibility(tsMs, timeSource, kind) {
@@ -3593,13 +3920,20 @@
           }
         });
 
-        const pcts = [0.15, 0.50, 0.85];
+        // Frame 1 sehr früh (0.12s) für Kameras mit Video-Start-Info-Sequenz (Datum/Uhrzeit/Kamera), dann Mitte (48%) & Ende (84%)
+        const targetSecs = [
+          Math.min(Math.max(0.08, Math.min(0.15, duration * 0.04)), Math.max(0.08, duration - 0.12)),
+          Math.max(0.25, Math.min(duration - 0.12, duration * 0.48)),
+          Math.max(0.4, Math.min(duration - 0.12, duration * 0.84))
+        ];
         const captured = [];
-        for (const p of pcts) {
-          let targetSec = Math.max(0.15, Math.min(duration - 0.12, duration * p));
+        for (let idxT = 0; idxT < targetSecs.length; idxT++) {
+          const targetSec = targetSecs[idxT];
           let fr = await seekAndCapture(targetSec);
-          if (fr && fr.avgBrightness < 8 && duration > 1.5) {
-            const altSec = p < 0.5 ? Math.min(duration - 0.2, targetSec + 0.7) : Math.max(0.2, targetSec - 0.7);
+          if (fr && fr.avgBrightness < 6 && duration > 1.5) {
+            const altSec = idxT === 0
+              ? Math.min(duration - 0.2, Math.max(0.45, duration * 0.15))
+              : (idxT === 1 ? Math.min(duration - 0.2, targetSec + 0.7) : Math.max(0.2, targetSec - 0.7));
             const altFr = await seekAndCapture(altSec);
             if (altFr && altFr.avgBrightness > fr.avgBrightness) {
               fr = altFr;
@@ -4070,13 +4404,17 @@
                 type: "STRING",
                 enum: [
                   "SCHWARZWILD",
-                  "REHWILD",
+                  "ROTWILD",
                   "DAMWILD",
+                  "REHWILD",
                   "RAUBWILD",
+                  "SCHAKAL",
+                  "WILDKATZE",
                   "WOLF",
+                  "STOERUNG",
+                  "BESONDERES",
                   "HAUSTIER",
                   "VOGEL",
-                  "STOERUNG",
                   "LEERBILD",
                   "UNKLAR"
                 ]
@@ -4088,6 +4426,12 @@
               },
               isUncertain: { type: "BOOLEAN" },
               totalCount: { type: "INTEGER" },
+              isTrophy: { type: "BOOLEAN" },
+              trophyType: {
+                type: "STRING",
+                enum: ["REHBOCK", "DAMHIRSCH", "ROTHIRSCH", "KEILER", ""]
+              },
+              trophyDetail: { type: "STRING" },
               boarBreakdown: {
                 type: "OBJECT",
                 properties: {
@@ -4114,6 +4458,7 @@
               bestFrameIndex: { type: "INTEGER" },
               ocrTimestamp: { type: "STRING" },
               ocrTempC: { type: "STRING" },
+              ocrCameraInfo: { type: "STRING" },
               notes: { type: "STRING" }
             },
             required: [
@@ -4123,10 +4468,14 @@
               "confidence",
               "isUncertain",
               "totalCount",
+              "isTrophy",
+              "trophyType",
+              "trophyDetail",
               "boarBreakdown",
               "bestFrameIndex",
               "ocrTimestamp",
               "ocrTempC",
+              "ocrCameraInfo",
               "notes"
             ]
           }
@@ -4140,16 +4489,28 @@
         {
           text: [
             "Du bist ein erfahrener, konservativer Wildkamera-Auswerter für ein deutsches Waldrevier.",
-            `Du erhältst ${packet.length} Einträge (entryIndex 0 bis ${packet.length - 1}). Ein Foto besteht aus 1 Bild, ein Video aus bis zu 3 Standbildern desselben Clips.`,
+            `Du erhältst ${packet.length} Einträge (entryIndex 0 bis ${packet.length - 1}). Ein Foto besteht aus 1 Bild, ein Video aus bis zu 3 Standbildern desselben Clips (Standbild 1 liegt bewusst ganz am Videoanfang für eventuelle Start-Info-Tafeln).`,
             "Regeln für die Auswertung:",
-            "1. Bestimme für jeden Eintrag die Hauptkategorie (SCHWARZWILD, REHWILD, DAMWILD, RAUBWILD, WOLF, HAUSTIER, VOGEL, STOERUNG für Mensch/Fahrzeug/Traktor, LEERBILD wenn kein Tier/Mensch erkennbar, oder UNKLAR).",
+            "1. Bestimme für jeden Eintrag die Hauptkategorie: SCHWARZWILD, ROTWILD (Rothirsch/Alttier/Kalb – klar getrennt von Dam- & Rehwild), DAMWILD, REHWILD, RAUBWILD (Fuchs, Dachs, Marder, Marderhund/Enok, Waschbär, Iltis, Hase), SCHAKAL (Goldschakal), WILDKATZE (klar getrennt von Hauskatze/HAUSTIER!), WOLF, STOERUNG (Mensch/Fahrzeug/Traktor/Radfahrer), BESONDERES (außergewöhnliche Sichtungen wie Luchs, Biber, Otter, Elch o. Ä.), HAUSTIER (Hund/Hauskatze), VOGEL, LEERBILD (kein Tier/Mensch) oder UNKLAR.",
             "2. Sei KONSERVATIV: Wenn bei Nacht/IR, Nebel, Bewegung oder Gestrüpp nicht sicher erkennbar ist, ob es Wild oder nur ein Ast/Lichtreflex ist, wähle UNKLAR und setze isUncertain=true.",
-            "3. WICHTIGE ABGRENZUNG SCHWARZWILD vs. DACHS / WASCHBÄR (Nacht/IR): Verwechsle einzelne, tief und gedrungen gebaute Tiere in Bodennähe nicht vorschnell mit Schwarzwild! Prüfe bei einzelnen kleineren bis mittelgroßen dunklen Tieren gezielt auf: Gesichtsstreifen oder Gesichtsmaske (Dachs: schwarz-weiße Kopfstreifen, keilförmiger Kopf; Waschbär: dunkle Augenmaske), sehr niedrigen bodennahen Körperbau mit kurzen Läufen, buschigen oder geringelten Schwanz (Waschbär) sowie das Größenverhältnis zu Kirrgut, Ästen, Laub und Baumstämmen. Wähle SCHWARZWILD nur, wenn typische Sauen-Merkmale (Wurf/Rüsselscheibe, hochläufigerer Körper mit abfallendem Rücken, Pürzel, passende Körpergröße) wirklich erkennbar sind. Bei Dachs oder Waschbär wähle RAUBWILD (speciesDetail: 'Dachs' bzw. 'Waschbär'); im Zweifel lieber RAUBWILD oder UNKLAR mit isUncertain=true (Gelb) statt vorschnell SCHWARZWILD.",
-            "4. Zähle bei totalCount das Maximum gleichzeitig sichtbarer Individuen auf EINEM Bild des Eintrags (nicht über Video-Frames addieren!).",
-            "5. Bei SCHWARZWILD: Verteile totalCount auf boarBreakdown. Nur wenn Geschlecht/Klasse wirklich sicher erkennbar ist (z. B. Pinsel/Waffen -> keiler, Striche/führend -> bache, typische Streifen/geringe Größe -> frischling), nutze die exakten Klassen. Bei unsicherer Größe/Geschlecht nutze grossUnklar (erwachsene/starke Sau unklar), kleinUnklar (mittel/klein unklar) oder unbekannt (nur Schemen/Lichter). Die Summe in boarBreakdown muss totalCount entsprechen; bei Nicht-Schwarzwild alle Werte 0.",
-            "6. Lies falls vorhanden den eingebrannten Kamera-Infobalken ab: ocrTimestamp im Format 'YYYY-MM-DD HH:MM:SS' (oder '' falls nicht lesbar) und ocrTempC (z. B. '4°C' oder '').",
-            "7. bestFrameIndex: Bei Fotos 0; bei Videos der Index (0, 1 oder 2) des Standbilds, auf dem das Wild am deutlichsten zu sehen ist.",
-            "8. notes: Kurze, präzise deutsche Beschreibung (max. 95 Zeichen)."
+            "3. WICHTIGE ARTEN-ABGRENZUNGEN (Nacht/IR & Tag):",
+            "   - SCHWARZWILD vs. DACHS / WASCHBÄR / MARDERHUND: Verwechsle einzelne, tief und gedrungen gebaute Tiere in Bodennähe nicht vorschnell mit Schwarzwild! Prüfe auf Gesichtsstreifen (Dachs: schwarz-weiße Kopfstreifen, keilförmiger Kopf), dunkle Augenmaske & geringelten Schwanz (Waschbär) oder kurze Läufe, rundlichen Körper, dunkle Backenmaske & einfarbigen kurzen Schwanz ohne Ringe (Marderhund / Enok -> category: 'RAUBWILD', speciesDetail: 'Marderhund (Enok)', NIEMALS einfach 'Marder'!). Wähle SCHWARZWILD nur bei echten Sauen-Merkmalen (Wurf/Rüsselscheibe, hochläufigerer Körper mit abfallendem Rücken, Pürzel, passende Größe).",
+            "   - WILDKATZE vs. HAUSKATZE: Achte bei Katzen genau auf buschigen, stumpf endenden Schwanz mit dunklen Ringen und schwarzer Spitze, verwaschene Zeichnung und kräftigen Körperbau -> category: 'WILDKATZE' (immer isUncertain=true zur Kontrolle). Im Zweifel zwischen Wild- und Hauskatze NICHT voreilig HAUSTIER wählen, sondern UNKLAR mit isUncertain=true.",
+            "   - GOLDSCHAKAL vs. FUCHS / WOLF: Hochläufiger als Fuchs, kürzerer Schwanz mit dunkler Spitze, graugelbes Fell, deutlich kleiner als Wolf -> bei Verdacht category: 'SCHAKAL' und isUncertain=true (Gelb) setzen.",
+            "4. AUSFÜHRLICHE TROPHÄENTRÄGER-ERKENNUNG (isTrophy, trophyType, trophyDetail):",
+            "   - REHWILD (Rehbock): Prüfe den Kopf genau! Benenne alles, was oben drauf ist: kleine Knöpfe/Gnubbel ('Knopfbock'), Spieße ('Spießer'), Gabler ('Gabler'), Sechser ('Gerader 6er' / 'Ungerader 6er'), 'Abnormes Gehörn', 'Bast-Gehörn' oder 'Perückenbock'. Setze isTrophy=true, trophyType='REHBOCK', trophyDetail=<kurze genaue Beschreibung>.",
+            "   - DAMWILD (Damhirsch): Unterscheide nach Geweih-Ausprägung: kleine Spieße ('Spießer'), 'Knieper / Löffler', 'Halbschaufler', starke/große Schaufeln ('Starker Schaufler'). Setze isTrophy=true, trophyType='DAMHIRSCH', trophyDetail=<Beschreibung>.",
+            "   - ROTWILD (Rothirsch): Unterscheide nach Geweih-Ausprägung: 'Spießer', 'Gabler', 'Sechser' / 'Achter' / 'Zehner', 'Kronenhirsch', 'Starkes Geweih'. Setze isTrophy=true, trophyType='ROTHIRSCH', trophyDetail=<Beschreibung>.",
+            "   - SCHWARZWILD (Keiler): Achte sehr genau auf echte Keiler-Merkmale: sichtbare Waffen/Zähne (Gewehre/Haderer), typischer Keilerbuckel / markanter Doppelbuckel (Körperkontur), sichtbar ausgeprägte Klötze hinten (Hoden/Kurzwildbret) sowie Bauchpinsel. NUR wenn mindestens eines dieser Merkmale sichtbar ist: isTrophy=true, trophyType='KEILER' und in trophyDetail kurz nennen, woran erkannt (z. B. 'Keiler · Waffen & Pinsel', 'Keiler · Doppelbuckel & Klötze').",
+            "   - Wenn KEIN Trophäenträger erkennbar ist (oder bei weiblichem Wild/Jungwild/anderen Arten): isTrophy=false, trophyType='', trophyDetail=''.",
+            "5. Zähle bei totalCount das Maximum gleichzeitig sichtbarer Individuen auf EINEM Bild des Eintrags (nicht über Video-Frames addieren!).",
+            "6. Bei SCHWARZWILD: Verteile totalCount auf boarBreakdown. Nur wenn Geschlecht/Klasse wirklich sicher erkennbar ist (z. B. Pinsel/Waffen/Klötze -> keiler, Striche/führend -> bache, typische Streifen/geringe Größe -> frischling), nutze exakte Klassen. Sonst grossUnklar, kleinUnklar oder unbekannt. Summe muss totalCount entsprechen; bei Nicht-Schwarzwild alle Werte 0.",
+            "7. INFOBALKEN- & VIDEO-START-INFO-OCR (SEHR WICHTIG):",
+            "   - Manche Wildkameras zeigen im Video keinen dauerhaften Balken, sondern blenden NUR in der allerersten Sequenz (Standbild 1 am Videoanfang) Datum, Uhrzeit und ggf. Kamera-Kennung ein! Prüfe Standbild 1 daher besonders sorgfältig.",
+            "   - ACHTUNG DATUMSFORMAT: Deutsche Wildkameras drucken fast immer TT.MM.JJJJ (Tag.Monat.Jahr) oder JJJJ-MM-TT! Verwechsle NIEMALS Tag und Monat ins US-Format (z. B. ist '01.11.2026' der 1. November 2026 -> '2026-11-01', NICHT 11. Januar!). Nur wenn ausdrücklich MM/DD/YYYY mit AM/PM oder eine zweite Zahl > 12 gedruckt ist, gilt US-Format.",
+            "   - Gib ocrTimestamp strikt als 'YYYY-MM-DD HH:MM:SS' aus (oder '' falls unlesbar), ocrTempC als Zahl/Text (z. B. '4°C' oder ''), und ocrCameraInfo falls auf dem Balken oder der Start-Tafel ein Kameraname/-modell steht (sonst '').",
+            "8. bestFrameIndex: Bei Fotos 0; bei Videos der Index (0, 1 oder 2) des Standbilds, auf dem das Wild (und besonders Geweih/Gehörn/Waffen bei Trophäenträgern!) am deutlichsten zu sehen ist.",
+            "9. notes: Kurze, präzise deutsche Beschreibung (max. 95 Zeichen)."
           ].join("\n")
         }
       ];
@@ -4314,18 +4675,26 @@
     }
 
     function applyAiResultToQueueItem(item, aiEntry, modelName) {
-      const safeEntry = aiEntry || {
+      const safeEntry = Object.assign({
         category: "UNKLAR",
         speciesDetail: "Keine KI-Antwort",
         confidence: "NIEDRIG",
         isUncertain: true,
         totalCount: 0,
+        isTrophy: false,
+        trophyType: "",
+        trophyDetail: "",
         boarBreakdown: { keiler: 0, bache: 0, ueberlaeuferBache: 0, ueberlaeuferKeiler: 0, frischling: 0, grossUnklar: 0, kleinUnklar: 0, unbekannt: 0 },
         bestFrameIndex: 0,
         ocrTimestamp: "",
         ocrTempC: "",
+        ocrCameraInfo: "",
         notes: "Bitte manuell prüfen"
-      };
+      }, aiEntry || {});
+      safeEntry.isTrophy = Boolean(safeEntry.isTrophy);
+      safeEntry.trophyType = String(safeEntry.trophyType || "").trim();
+      safeEntry.trophyDetail = String(safeEntry.trophyDetail || "").trim();
+      safeEntry.ocrCameraInfo = String(safeEntry.ocrCameraInfo || "").trim();
 
       // Zeitstempel-Rangfolge anwenden (Infobalken-OCR prüfen)
       const ocrTsRaw = parseOcrDateToMs(safeEntry.ocrTimestamp);
@@ -4665,6 +5034,7 @@
         if (!__isImporting) {
           await releaseScreenWakeLock();
         }
+        await flagBatchDateOutliers();
         await syncVisitsFromQueue(false);
         await renderQueueOverview();
         await renderPruefenVisits();
@@ -4827,7 +5197,13 @@
     // =========================================================================
     const VISIT_GAP_STORAGE = "ul_visit_gap_min_v1";
     let __pruefenFilter = "YELLOW"; // YELLOW | GREEN | CONFIRMED | TRASH
+    let __pruefenTrophyOnly = false;
     let __visitThumbUrls = [];
+
+    function togglePruefenTrophyFilter() {
+      __pruefenTrophyOnly = !__pruefenTrophyOnly;
+      renderPruefenVisits(false);
+    }
 
     function getVisitGapMinutes() {
       const v = Number(safeGetItem(VISIT_GAP_STORAGE, "15"));
@@ -4978,32 +5354,80 @@
     function getCategoryLabelDE(cat) {
       const map = {
         SCHWARZWILD: "🐗 Schwarzwild",
-        REHWILD: "🦌 Rehwild",
+        ROTWILD: "🦌 Rotwild",
         DAMWILD: "🦌 Damwild",
-        RAUBWILD: "🦊 Raub-/Kleinwild",
+        REHWILD: "🦌 Rehwild",
+        RAUBWILD: "🦊 Raubwild",
+        SCHAKAL: "🦊 Goldschakal",
+        WILDKATZE: "🐱 Wildkatze",
         WOLF: "🐺 Wolf",
-        HAUSTIER: "🐕 Hund/Katze",
-        VOGEL: "🦅 Vogel",
         STOERUNG: "🚶 Störung",
+        BESONDERES: "✨ Besonderes",
+        HAUSTIER: "🐕 Hund/Hauskatze",
+        VOGEL: "🦅 Vogel",
         LEERBILD: "🗑️ Leerbild",
         UNKLAR: "❓ Unklar"
       };
       return map[cat] || cat || "❓ Unklar";
     }
 
-    // Feine Wildart-Trennung innerhalb RAUBWILD / HAUSTIER (z. B. Fuchs vs. Dachs 2 Min. später!)
+    function getTrophyTypeLabelDE(tType) {
+      const map = {
+        REHBOCK: "Rehbock",
+        DAMHIRSCH: "Damhirsch",
+        ROTHIRSCH: "Rothirsch",
+        KEILER: "Keiler"
+      };
+      return map[tType] || tType || "Trophäenträger";
+    }
+
+    function defaultTrophyTypeForCategory(cat) {
+      const map = {
+        REHWILD: "REHBOCK",
+        DAMWILD: "DAMHIRSCH",
+        ROTWILD: "ROTHIRSCH",
+        SCHWARZWILD: "KEILER"
+      };
+      return map[cat] || "";
+    }
+
+    function readSauenmatrixTrophaeen() {
+      const raw = safeGetJSON("sm_trophaeen_v1", []);
+      if (!Array.isArray(raw)) return [];
+      return raw
+        .filter(t => t && typeof t === "object" && (t.name || t.titel))
+        .map(t => ({
+          id: String(t.id || t.name || t.titel || "").trim(),
+          name: String(t.name || t.titel || "").trim(),
+          species: String(t.species || t.art || "").trim().toUpperCase(),
+          ageEstimate: String(t.ageEstimate || "").trim()
+        }))
+        .filter(t => t.name);
+    }
+
+    // Feine Wildart-Trennung innerhalb RAUBWILD / HAUSTIER (Marderhund/Enok strikt vor Marder und Hund!)
     function getSpeciesGroupKey(category, speciesDetail) {
       if (category !== "RAUBWILD" && category !== "HAUSTIER") {
         return category || "UNKLAR";
       }
       const det = String(speciesDetail || "").toLowerCase();
       const keywords = [
-        ["dachs", "DACHS"],
-        ["fuchs", "FUCHS"],
-        ["waschb", "WASCHBAER"],
         ["marderhund", "MARDERHUND"],
+        ["enok", "MARDERHUND"],
+        ["tanuki", "MARDERHUND"],
+        ["waschb", "WASCHBAER"],
+        ["dachs", "DACHS"],
+        ["goldschakal", "SCHAKAL"],
+        ["schakal", "SCHAKAL"],
+        ["fuchs", "FUCHS"],
+        ["steinmarder", "MARDER"],
+        ["baummarder", "MARDER"],
         ["marder", "MARDER"],
-        ["iltis", "ILTIS"],
+        ["iltis", "MARDER"],
+        ["hermelin", "MARDER"],
+        ["wiesel", "MARDER"],
+        ["mink", "MARDER"],
+        ["wildkatze", "WILDKATZE"],
         ["luchs", "LUCHS"],
         ["hase", "HASE"],
         ["kanin", "KANINCHEN"],
@@ -5041,8 +5465,22 @@
         if (cnt > maxCount) maxCount = cnt;
       });
 
-      // Deutlichstes Einzelbild ermitteln (höchste Stückzahl -> höchste Sicherheit -> höchste Helligkeit)
-      const bestItem = clusterItems.reduce((best, cur) => {
+      // Trophäenträger im Besuch ermitteln (sobald mind. 1 Aufnahme einen Trophäenträger zeigt, übernimmt der Besuch)
+      const trophyItems = clusterItems.filter(it => Boolean(it.aiResult?.isTrophy));
+      const bestTrophyItem = trophyItems.length > 0
+        ? trophyItems.reduce((best, cur) => {
+            const bDet = String(best.aiResult?.trophyDetail || "").length;
+            const cDet = String(cur.aiResult?.trophyDetail || "").length;
+            const bConf = confidenceRank(best.aiResult?.confidence);
+            const cConf = confidenceRank(cur.aiResult?.confidence);
+            if (cConf !== bConf) return cConf > bConf ? cur : best;
+            if (cDet !== bDet) return cDet > bDet ? cur : best;
+            return (cur.avgBrightness || 0) > (best.avgBrightness || 0) ? cur : best;
+          }, trophyItems[0])
+        : null;
+
+      // Deutlichstes Einzelbild ermitteln (bevorzugt deutlichstes Trophäen-Bild -> höchste Stückzahl -> Sicherheit -> Helligkeit)
+      const bestItem = bestTrophyItem || clusterItems.reduce((best, cur) => {
         const bCnt = Number(best.aiResult?.totalCount || 0);
         const cCnt = Number(cur.aiResult?.totalCount || 0);
         if (cCnt !== bCnt) return cCnt > bCnt ? cur : best;
@@ -5053,6 +5491,14 @@
       }, clusterItems[0]);
 
       const bestRes = bestItem.aiResult || {};
+      const isTrophy = Boolean(bestTrophyItem);
+      const trophyType = isTrophy
+        ? (String(bestTrophyItem.aiResult?.trophyType || "").trim() || defaultTrophyTypeForCategory(cat))
+        : "";
+      const trophyDetail = isTrophy
+        ? (String(bestTrophyItem.aiResult?.trophyDetail || "").trim() || getTrophyTypeLabelDE(trophyType))
+        : "";
+
       let boarBreakdown = emptyBoarBreakdown();
       if (cat === "SCHWARZWILD") {
         const mergedBoar = mergeBoarBreakdownsMax(clusterItems.map(it => ({
@@ -5074,6 +5520,8 @@
       } else {
         if (cat === "UNKLAR") yellowReasons.push("Art unklar");
         if (cat === "WOLF") yellowReasons.push("Wolf-Meldung prüfen");
+        if (cat === "SCHAKAL") yellowReasons.push("Goldschakal-Verdacht prüfen");
+        if (cat === "WILDKATZE") yellowReasons.push("Wildkatzen-Verdacht prüfen");
         if (clusterItems.some(it => it.aiResult?.isUncertain)) yellowReasons.push("KI unsicher");
         if (bestRes.confidence === "NIEDRIG") yellowReasons.push("Niedrige Sicherheit");
         if (clusterItems.some(it => it.timeSuspect)) {
@@ -5085,6 +5533,7 @@
       }
 
       const ocrTempItem = clusterItems.find(it => it.aiResult?.ocrTempC);
+      const ocrCamItem = clusterItems.find(it => it.aiResult?.ocrCameraInfo);
       return {
         id: `vis_${first.spotKey || "spot"}_${speciesGroupKey}_${first.id}`.replace(/[^A-Za-z0-9_:-]/g, "_"),
         spotKey: first.spotKey || "",
@@ -5100,6 +5549,11 @@
         maxCount,
         boarBreakdown,
         rottenTag: "",
+        isTrophy,
+        trophyType,
+        trophyDetail,
+        trophyTag: "",
+        trophyId: "",
         notes: bestRes.notes || "",
         confidence: bestRes.confidence || "MITTEL",
         ampel,
@@ -5113,6 +5567,7 @@
         bestFrameIndex: Number(bestRes.bestFrameIndex || 0),
         thumbBlob: bestItem.thumbBlob || null,
         ocrTempC: ocrTempItem ? ocrTempItem.aiResult.ocrTempC : "",
+        ocrCameraInfo: ocrCamItem ? ocrCamItem.aiResult.ocrCameraInfo : "",
         createdAt: Date.now(),
         updatedAt: Date.now()
       };
@@ -5126,8 +5581,9 @@
       const endTs = Math.max(...sorted.map(v => v.endTs || v.startTs || Date.now()));
       const durationMin = Math.max(1, Math.round(Math.max(0, endTs - startTs) / 60000));
 
-      // Bestes Vorschaubild wählen
+      // Bestes Vorschaubild wählen (Trophäen-Aufnahme bevorzugen!)
       const bestV = sorted.reduce((best, cur) => {
+        if (Boolean(cur.isTrophy) !== Boolean(best.isTrophy)) return cur.isTrophy ? cur : best;
         if ((cur.maxCount || 0) !== (best.maxCount || 0)) return (cur.maxCount || 0) > (best.maxCount || 0) ? cur : best;
         if (confidenceRank(cur.confidence) !== confidenceRank(best.confidence)) return confidenceRank(cur.confidence) > confidenceRank(best.confidence) ? cur : best;
         if (cur.thumbBlob && !best.thumbBlob) return cur;
@@ -5188,6 +5644,18 @@
       const firstRotten = sorted.find(v => v.rottenTag)?.rottenTag || "";
       const firstMapped = sorted.find(v => v.mappedKanzel)?.mappedKanzel || "";
       const firstTemp = sorted.find(v => v.ocrTempC)?.ocrTempC || "";
+      const firstCamInfo = sorted.find(v => v.ocrCameraInfo)?.ocrCameraInfo || "";
+      const trophyVisits = sorted.filter(v => v.isTrophy);
+      const isTrophy = trophyVisits.length > 0;
+      const topTrophyV = trophyVisits.reduce((b, c) =>
+        (String(c.trophyDetail || "").length > String(b.trophyDetail || "").length ? c : b),
+        trophyVisits[0] || null
+      );
+      const trophyType = isTrophy ? (topTrophyV?.trophyType || defaultTrophyTypeForCategory(base.category)) : "";
+      const trophyDetail = isTrophy ? (topTrophyV?.trophyDetail || "") : "";
+      const firstTrophyTag = sorted.find(v => v.trophyTag)?.trophyTag || "";
+      const firstTrophyId = sorted.find(v => v.trophyId)?.trophyId || "";
+
       const notesList = [];
       sorted.forEach(v => {
         const n = String(v.notes || "").trim();
@@ -5211,6 +5679,11 @@
         maxCount,
         boarBreakdown,
         rottenTag: firstRotten,
+        isTrophy,
+        trophyType,
+        trophyDetail,
+        trophyTag: firstTrophyTag,
+        trophyId: firstTrophyId,
         notes: notesList.slice(0, 2).join(" | "),
         confidence: bestV.confidence || "MITTEL",
         ampel,
@@ -5224,6 +5697,7 @@
         bestFrameIndex: Number(bestV.bestFrameIndex || 0),
         thumbBlob: bestV.thumbBlob || anchor.thumbBlob || null,
         ocrTempC: firstTemp,
+        ocrCameraInfo: firstCamInfo,
         updatedAt: Date.now()
       };
     }
@@ -5334,6 +5808,7 @@
 
     // Bündelt alle DONE-Einträge aus der Warteschlange nach Standort, Wildart & Lückenzeit (inkl. Nebel-Leerbild-Überbrückung)
     async function syncVisitsFromQueue(forceRebuild = false, resetEdited = false) {
+      await flagBatchDateOutliers();
       const gapMs = getVisitGapMinutes() * 60000;
       const doneItems = (await idbGetAll("queue").catch(() => []))
         .filter(x => x.status === "DONE")
@@ -5601,11 +6076,22 @@
       const listEl = document.getElementById("visits-list");
       if (!listEl) return;
 
-      const activeList =
+      const baseActiveList =
         __pruefenFilter === "YELLOW" ? yellowList :
         __pruefenFilter === "GREEN" ? greenList :
         __pruefenFilter === "CONFIRMED" ? confirmedList :
         trashList;
+
+      const trophyCntInTab = baseActiveList.filter(v => v.isTrophy).length;
+      const totalTrophyCnt = visits.filter(v => v.isTrophy && v.reviewState !== "TRASHED" && v.ampel !== "TRASH").length;
+      const trBtn = document.getElementById("btn-pruefen-trophy-only");
+      const trCntEl = document.getElementById("cnt-pruefen-trophies");
+      if (trBtn) trBtn.classList.toggle("active", __pruefenTrophyOnly);
+      if (trCntEl) trCntEl.textContent = `${trophyCntInTab} hier · ${totalTrophyCnt} ges.`;
+
+      const activeList = __pruefenTrophyOnly
+        ? baseActiveList.filter(v => v.isTrophy)
+        : baseActiveList;
 
       if (activeList.length === 0) {
         const emptyMsgs = {
@@ -5614,7 +6100,10 @@
           CONFIRMED: "Noch keine bestätigten Besuche. Bestätige Besuche unter 🟡 Gelb oder 🟢 Grün.",
           TRASH: "Der Papierkorb ist leer."
         };
-        listEl.innerHTML = `<div class="tile-dark" style="text-align:center; padding:22px 12px; color:var(--text-muted); font-size:0.82rem;">${emptyMsgs[__pruefenFilter]}</div>`;
+        const msg = __pruefenTrophyOnly
+          ? `🏆 Keine Trophäenträger in diesem Reiter (${totalTrophyCnt} insgesamt in anderen Reitern).`
+          : emptyMsgs[__pruefenFilter];
+        listEl.innerHTML = `<div class="tile-dark" style="text-align:center; padding:22px 12px; color:var(--text-muted); font-size:0.82rem;">${msg}</div>`;
         return;
       }
 
@@ -5627,15 +6116,16 @@
 
         const isTrash = v.reviewState === "TRASHED" || v.ampel === "TRASH";
         const isConfirmed = v.reviewState === "CONFIRMED" || v.reviewState === "SENT";
+        const isAlertCat = (v.category === "WOLF" || v.category === "SCHAKAL" || v.category === "WILDKATZE");
         const cardCls = `visit-card ${
-          v.category === "WOLF" ? "v-wolf" :
+          isAlertCat ? "v-wolf" :
           isTrash ? "v-trash" :
           isConfirmed ? "v-done" :
           v.ampel === "YELLOW" ? "v-yellow" : ""
-        }`;
+        } ${v.isTrophy ? "v-trophy" : ""}`;
 
         const badgeCls =
-          v.category === "WOLF" || v.category === "STOERUNG" ? "pill-red" :
+          isAlertCat || v.category === "STOERUNG" ? "pill-red" :
           isTrash ? "pill-blue" :
           isConfirmed ? "pill-blue" :
           v.ampel === "YELLOW" ? "pill-yellow" : "pill-green";
@@ -5680,11 +6170,13 @@
               <div class="visit-meta-col">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:3px;">
                   <span class="pill ${badgeCls}">${escapeHTML(getCategoryLabelDE(v.category))}${v.maxCount > 0 ? ` · ${v.maxCount}×` : ""}</span>
+                  ${v.isTrophy ? `<span class="pill pill-trophy">🏆 ${escapeHTML(getTrophyTypeLabelDE(v.trophyType))}</span>` : ""}
                   ${v.reviewState === "SENT" ? `<span class="pill pill-green">📤 Übergeben</span>` : ""}
                   ${v.rottenTag ? `<span class="pill pill-blue">🏷️ ${escapeHTML(v.rottenTag)}</span>` : ""}
+                  ${v.trophyTag ? `<span class="pill pill-trophy">🎯 ${escapeHTML(v.trophyTag)}</span>` : ""}
                 </div>
                 <div style="font-weight:800; color:#fff;">
-                  📍 ${escapeHTML(v.spotName)} <span style="color:var(--text-muted); font-weight:600;">(${escapeHTML(v.cameraName)})</span>
+                  📍 ${escapeHTML(v.spotName)} <span style="color:var(--text-muted); font-weight:600;">(${escapeHTML(v.cameraName)}${v.ocrCameraInfo && !String(v.cameraName || "").toLowerCase().includes(String(v.ocrCameraInfo).toLowerCase()) ? ` · Info: ${escapeHTML(v.ocrCameraInfo)}` : ""})</span>
                 </div>
                 <div style="color:#d4f3dd; font-weight:700; margin-top:2px;">
                   📅 ${escapeHTML(formatDateDE(v.startTs))} · 🕒 ${escapeHTML(timeRange)}
@@ -5695,6 +6187,7 @@
               </div>
             </div>
 
+            ${v.isTrophy ? `<div class="visit-trophy-strip">🏆 ${escapeHTML(getTrophyTypeLabelDE(v.trophyType))}${v.trophyDetail ? ` · ${escapeHTML(v.trophyDetail)}` : ""}${v.trophyTag ? ` · Steckbrief: ${escapeHTML(v.trophyTag)}` : ""}</div>` : ""}
             ${boarTxt ? `<div class="visit-boar-strip">🐗 ${escapeHTML(boarTxt)}</div>` : ""}
             ${(!isConfirmed && !isTrash && v.yellowReasons && v.yellowReasons.length > 0) ? `<div class="visit-warn-strip">⚠️ Prüfen: ${escapeHTML(v.yellowReasons.join(" · "))}</div>` : ""}
 
@@ -5923,6 +6416,7 @@
             ts: qItem.effectiveTs,
             timeSource: qItem.timeSource,
             ocrTempC: qItem.aiResult?.ocrTempC || "",
+            ocrCameraInfo: qItem.aiResult?.ocrCameraInfo || "",
             frameLabel: !hasHighRes
               ? "Vorschau (320 px · Arbeitsbild aufgeräumt)"
               : (blobs.length > 1 ? `Video-Frame ${fIdx + 1}/${blobs.length}` : "Foto (1024 px)")
@@ -5984,7 +6478,7 @@
       document.getElementById("lupe-next-btn").disabled = __lupeFrames.length <= 1;
       document.getElementById("lupe-frame-meta").innerHTML = `
         📄 <strong>${escapeHTML(fr.fileName)}</strong><br>
-        🕒 ${escapeHTML(formatTimestampDE(fr.ts))} (${escapeHTML(fr.timeSource)})${fr.ocrTempC ? ` · 🌡️ ${escapeHTML(fr.ocrTempC)}` : ""}
+        🕒 ${escapeHTML(formatTimestampDE(fr.ts))} (${escapeHTML(fr.timeSource)})${fr.ocrTempC ? ` · 🌡️ ${escapeHTML(fr.ocrTempC)}` : ""}${fr.ocrCameraInfo ? ` · 📷 ${escapeHTML(fr.ocrCameraInfo)}` : ""}
       `;
       applyLupeFilters();
     }
@@ -6089,11 +6583,85 @@
       renderEditBoarSteppers();
     }
 
+    function populateTrophySelect(selectedIdOrTag = "") {
+      const sel = document.getElementById("ev-trophy-select");
+      if (!sel) return;
+      const profiles = readSauenmatrixTrophaeen();
+      const cat = document.getElementById("ev-category")?.value || "";
+      const curType = document.getElementById("ev-trophy-type")?.value || defaultTrophyTypeForCategory(cat);
+
+      // Passende Art aus sm_trophaeen_v1 ganz nach oben sortieren
+      const matching = curType ? profiles.filter(t => t.species === curType) : [];
+      const others = profiles.filter(t => !matching.includes(t));
+      const ordered = [...matching, ...others];
+
+      sel.innerHTML = `<option value="">— Kein Trophäen-Steckbrief —</option>`;
+      ordered.forEach(t => {
+        const opt = document.createElement("option");
+        opt.value = t.id;
+        opt.setAttribute("data-trophy-name", t.name);
+        const spLbl = t.species ? ` (${getTrophyTypeLabelDE(t.species)})` : "";
+        opt.textContent = `🏆 ${t.name}${spLbl}`;
+        sel.appendChild(opt);
+      });
+
+      if (selectedIdOrTag) {
+        const byId = ordered.find(t => t.id === selectedIdOrTag);
+        const byName = !byId ? ordered.find(t => t.name === selectedIdOrTag) : null;
+        if (byId) {
+          sel.value = byId.id;
+        } else if (byName) {
+          sel.value = byName.id;
+        } else {
+          const opt = document.createElement("option");
+          opt.value = selectedIdOrTag;
+          opt.setAttribute("data-trophy-name", selectedIdOrTag);
+          opt.textContent = `🏆 ${selectedIdOrTag}`;
+          sel.appendChild(opt);
+          sel.value = selectedIdOrTag;
+        }
+      }
+    }
+
+    function onEditTrophyToggle() {
+      const chk = document.getElementById("ev-is-trophy");
+      const fields = document.getElementById("ev-trophy-fields");
+      const typeSel = document.getElementById("ev-trophy-type");
+      const cat = document.getElementById("ev-category")?.value || "";
+      const active = Boolean(chk && chk.checked);
+      if (fields) fields.style.display = active ? "block" : "none";
+      if (active && typeSel && !typeSel.value) {
+        const defType = defaultTrophyTypeForCategory(cat);
+        if (defType) typeSel.value = defType;
+      }
+      if (active) {
+        populateTrophySelect(document.getElementById("ev-trophy-select")?.value || "");
+      }
+    }
+
     function onEditVisitCategoryChange() {
       const cat = document.getElementById("ev-category")?.value || "UNKLAR";
       const panel = document.getElementById("ev-boar-panel");
+      const trophyPanel = document.getElementById("ev-trophy-panel");
       const totInp = document.getElementById("ev-total-count");
+      const supportsTrophy = ["SCHWARZWILD", "REHWILD", "DAMWILD", "ROTWILD"].includes(cat);
+
       if (panel) panel.style.display = (cat === "SCHWARZWILD") ? "block" : "none";
+      if (trophyPanel) trophyPanel.style.display = supportsTrophy ? "block" : "none";
+
+      if (supportsTrophy) {
+        const typeSel = document.getElementById("ev-trophy-type");
+        const defType = defaultTrophyTypeForCategory(cat);
+        if (typeSel && defType && (!typeSel.value || document.getElementById("ev-is-trophy")?.checked)) {
+          typeSel.value = defType;
+        }
+        populateTrophySelect(document.getElementById("ev-trophy-select")?.value || "");
+      } else {
+        const chk = document.getElementById("ev-is-trophy");
+        if (chk) chk.checked = false;
+        onEditTrophyToggle();
+      }
+
       if (cat === "SCHWARZWILD") {
         // Falls von anderer Art auf Schwarzwild gewechselt wurde, bisherige Stückzahl in UNBEK. übernehmen
         const curTotal = Math.max(0, Number(totInp?.value || 0));
@@ -6142,8 +6710,21 @@
       await populateSpotSelect(spotSel, v.spotKey || "", true);
       populateRottenSelect(v.rottenTag || "");
 
+      const isTr = Boolean(v.isTrophy);
+      const trChk = document.getElementById("ev-is-trophy");
+      const trTypeSel = document.getElementById("ev-trophy-type");
+      const trDetInp = document.getElementById("ev-trophy-detail");
+      if (trChk) trChk.checked = isTr;
+      if (trTypeSel) trTypeSel.value = v.trophyType || (isTr ? defaultTrophyTypeForCategory(v.category) : "");
+      if (trDetInp) trDetInp.value = v.trophyDetail || "";
+
       __evBoarState = Object.assign(emptyBoarBreakdown(), v.boarBreakdown || {});
       onEditVisitCategoryChange();
+      if (trTypeSel && (v.trophyType || isTr)) {
+        trTypeSel.value = v.trophyType || defaultTrophyTypeForCategory(v.category);
+      }
+      populateTrophySelect(v.trophyId || v.trophyTag || "");
+      onEditTrophyToggle();
       renderEditBoarSteppers();
       updateEditVisitDurationHint();
 
@@ -6192,6 +6773,25 @@
       v.speciesDetail = detail;
       v.notes = (document.getElementById("ev-notes")?.value || "").trim();
       v.rottenTag = cat === "SCHWARZWILD" ? (document.getElementById("ev-rotten-select")?.value || "") : "";
+
+      const supportsTrophy = ["SCHWARZWILD", "REHWILD", "DAMWILD", "ROTWILD"].includes(cat);
+      const isTrophyChecked = supportsTrophy && Boolean(document.getElementById("ev-is-trophy")?.checked);
+      v.isTrophy = isTrophyChecked;
+      if (isTrophyChecked) {
+        v.trophyType = (document.getElementById("ev-trophy-type")?.value || "").trim() || defaultTrophyTypeForCategory(cat);
+        v.trophyDetail = (document.getElementById("ev-trophy-detail")?.value || "").trim();
+        const trSel = document.getElementById("ev-trophy-select");
+        const selVal = (trSel?.value || "").trim();
+        const selOpt = trSel && trSel.selectedIndex >= 0 ? trSel.options[trSel.selectedIndex] : null;
+        const selName = selOpt ? (selOpt.getAttribute("data-trophy-name") || "").trim() : "";
+        v.trophyId = selVal;
+        v.trophyTag = selVal ? (selName || selVal) : "";
+      } else {
+        v.trophyType = "";
+        v.trophyDetail = "";
+        v.trophyId = "";
+        v.trophyTag = "";
+      }
 
       if (cat === "SCHWARZWILD") {
         v.boarBreakdown = Object.assign(emptyBoarBreakdown(), __evBoarState);
@@ -6695,13 +7295,52 @@
     }
 
     // =========================================================================
-    // 11B. DURCHREICHE (sm_cam_inbox_v1), REVIERBERICHT & BACKUP (ETAPPE 5)
+    // 11B. DURCHREICHE (sm_cam_inbox_v1), REVIERBERICHT & BACKUP (ETAPPE 5 / v0.5.5)
     // =========================================================================
     const SM_CAM_INBOX_KEY = "sm_cam_inbox_v1";
-    const BEIFANG_TRANSFER_CATEGORIES = new Set(["REHWILD", "DAMWILD", "RAUBWILD", "WOLF", "STOERUNG"]);
+    const BEIFANG_TRANSFER_CATEGORIES = new Set([
+      "ROTWILD",
+      "DAMWILD",
+      "REHWILD",
+      "RAUBWILD",
+      "WOLF",
+      "SCHAKAL",
+      "WILDKATZE",
+      "STOERUNG",
+      "BESONDERES"
+    ]);
+    let __uebSwExpanded = null;       // null = Automatik (eingeklappt ab > 5 Einträgen)
+    let __uebBycatchExpanded = null;
 
     function isBycatchTransferVisit(v) {
-      return Boolean(v && BEIFANG_TRANSFER_CATEGORIES.has(v.category));
+      if (!v || !BEIFANG_TRANSFER_CATEGORIES.has(v.category)) return false;
+      // Feldhase & Wildkaninchen bleiben lokal (wie in Sauenmatrix v27.0)
+      if (v.category === "RAUBWILD") {
+        const det = String(v.speciesDetail || "").toLowerCase();
+        if (/\b(feldhase|hase|hasen|kaninchen|wildkaninchen)\b/i.test(det)) return false;
+      }
+      return true;
+    }
+
+    // Normalisiert Wildart 1:1 auf die 13 Sauenmatrix-v27.0-Beifang-Schlüssel (für exakten Dubletten-Abgleich)
+    function mapVisitToSmxBeifangKey(category, speciesDetail = "") {
+      const cat = String(category || "").trim().toUpperCase();
+      const det = String(speciesDetail || "").trim().toUpperCase()
+        .replace(/Ä/g, "AE").replace(/Ö/g, "OE").replace(/Ü/g, "UE").replace(/ß/g, "SS");
+      const combo = `${det} ${cat}`.trim();
+      if (/(MARDERHUND|\bENOK\b|TANUKI)/.test(combo)) return "MARDERHUND";
+      if (/(WILDKATZE)/.test(combo)) return "WILDKATZE";
+      if (/(SCHAKAL|GOLDSCHAKAL)/.test(combo)) return "SCHAKAL";
+      if (/(\bWOLF\b|WOELFIN)/.test(combo)) return "WOLF";
+      if (/(WASCHBAER)/.test(combo)) return "WASCHBAER";
+      if (/(DACHS)/.test(combo)) return "DACHS";
+      if (/(FUCHS|ROTFUCHS|JUNGFUCHS)/.test(combo)) return "FUCHS";
+      if (/(MARDER|STEINMARDER|BAUMMARDER|ILTIS|HERMELIN|WIESEL|MINK)/.test(combo)) return "MARDER";
+      if (cat === "ROTWILD" || /(ROTWILD|ROTHIRSCH)/.test(combo)) return "ROTWILD";
+      if (cat === "DAMWILD" || /(DAMWILD|DAMHIRSCH|SCHAUFLER)/.test(combo)) return "DAMWILD";
+      if (cat === "REHWILD" || /(REHWILD|REHBOCK|RICKE|SCHMALREH|\bKITZ\b)/.test(combo)) return "REHWILD";
+      if (cat === "STOERUNG") return "STOERUNG";
+      return "SONSTIGES";
     }
 
     function readCamInbox() {
@@ -6736,11 +7375,34 @@
 
       return smLogs.some(log => {
         if (!log || typeof log !== "object") return false;
+        if (log.visitId && visit.id && String(log.visitId) === String(visit.id)) return true;
         const lKanzel = String(log.kanzel || "").trim().toLowerCase();
         if (lKanzel !== targetNorm) return false;
         const logMs = parseLogDateTimeMs(log.date, log.arrival);
         if (logMs !== null && visit.startTs) {
           return Math.abs(logMs - visit.startTs) <= 15 * 60000;
+        }
+        return false;
+      });
+    }
+
+    // Rein lesender Dubletten-Check für Beifang gegen sm_beifang_v1 (Sauenmatrix v27.0)
+    function findPossibleBeifangDuplicate(visit, targetKanzel) {
+      const smBeifang = safeGetJSON("sm_beifang_v1", []);
+      if (!Array.isArray(smBeifang) || smBeifang.length === 0 || !targetKanzel) return false;
+      const targetNorm = targetKanzel.trim().toLowerCase();
+      const visitSpKey = mapVisitToSmxBeifangKey(visit.category, visit.speciesDetail);
+
+      return smBeifang.some(bf => {
+        if (!bf || typeof bf !== "object") return false;
+        if (bf.visitId && visit.id && String(bf.visitId) === String(visit.id)) return true;
+        const bfKanzel = String(bf.kanzel || "").trim().toLowerCase();
+        if (bfKanzel !== targetNorm) return false;
+        const bfSpKey = bf.speciesKey || mapVisitToSmxBeifangKey(bf.category, bf.speciesDetail);
+        if (bfSpKey !== visitSpKey) return false;
+        const bfMs = parseLogDateTimeMs(bf.date, bf.arrival);
+        if (bfMs !== null && visit.startTs) {
+          return Math.abs(bfMs - visit.startTs) <= 15 * 60000;
         }
         return false;
       });
@@ -6753,8 +7415,23 @@
       const targetKanzel = (v.mappedKanzel || v.spotName || "Unbekannt").trim();
       const files = Array.isArray(v.fileNames) ? v.fileNames : [];
       const spDetail = (v.speciesDetail || getCategoryLabelDE(cat).replace(/^[^\s]+\s/, "")).trim();
+      const isTrophy = Boolean(v.isTrophy);
+      const trophyType = isTrophy ? (String(v.trophyType || "").trim() || defaultTrophyTypeForCategory(cat)) : "";
+      const trophyDetail = isTrophy ? String(v.trophyDetail || "").trim() : "";
+      const trophyTag = isTrophy ? String(v.trophyTag || "").trim() : "";
+      const trophyId = isTrophy ? String(v.trophyId || "").trim() : "";
+      const isMaleTrophy = Boolean(isTrophy && ["REHBOCK", "DAMHIRSCH", "ROTHIRSCH"].includes(trophyType));
+      const cleanTemp = parseCleanTempNumber(v.ocrTempC);
+
       const noteParts = [];
+      if (isTrophy) {
+        const tDesc = trophyDetail || getTrophyTypeLabelDE(trophyType);
+        noteParts.push(`🏆 ${tDesc}`);
+      }
       if (v.cameraName && v.cameraName !== "Ohne Profil") noteParts.push(`Kamera: ${v.cameraName}`);
+      if (v.ocrCameraInfo && !String(v.cameraName || "").toLowerCase().includes(String(v.ocrCameraInfo).toLowerCase())) {
+        noteParts.push(`Cam-Info: ${v.ocrCameraInfo}`);
+      }
       if (v.spotName && v.spotName !== targetKanzel) noteParts.push(`Platz: ${v.spotName}`);
       if (isSw && v.rottenTag) noteParts.push(`Rotte: ${v.rottenTag}`);
       if (v.notes) noteParts.push(v.notes);
@@ -6763,7 +7440,7 @@
         inboxId: `ul_${v.id}`,
         visitId: v.id,
         source: "UEBERLAEUFER",
-        sourceVersion: "0.5.4",
+        sourceVersion: "0.5.5",
         createdAt: Date.now(),
         status: isSw ? (statusVal || "GREEN") : (statusVal || "BEIFANG"),
         category: cat,
@@ -6785,11 +7462,80 @@
         UNBEKANNT: Number(b.unbekannt) || 0,
         totalCount: isSw ? (Number(v.maxCount) || sumBoarBreakdown(b)) : Math.max(0, Number(v.maxCount) || 0),
         rottenTag: isSw ? (v.rottenTag || "") : "",
-        ocrTempC: v.ocrTempC || "",
+        isTrophy,
+        trophyType,
+        trophyDetail,
+        trophyTag,
+        trophyId,
+        isMaleTrophy,
+        ocrTempC: cleanTemp,
         fileNames: files.slice(0, 8),
         fileCount: files.length,
         note: noteParts.join(" · ")
       };
+    }
+
+    function updateUebergabeSelectedCounts() {
+      const swAll = document.querySelectorAll(".ueb-visit-check").length;
+      const swChecked = document.querySelectorAll(".ueb-visit-check:checked").length;
+      const swSum = document.getElementById("ueb-sw-sel-summary");
+      const swBtn = document.getElementById("btn-push-inbox");
+      if (swSum) swSum.textContent = `${swChecked} von ${swAll} ausgewählt`;
+      if (swBtn) swBtn.textContent = `📤 ${swChecked}× Schwarzwild in Durchreiche legen`;
+
+      const bfAll = document.querySelectorAll(".ueb-bycatch-check").length;
+      const bfChecked = document.querySelectorAll(".ueb-bycatch-check:checked").length;
+      const bfSum = document.getElementById("ueb-bycatch-sel-summary");
+      const bfBtn = document.getElementById("btn-push-bycatch-inbox");
+      if (bfSum) bfSum.textContent = `${bfChecked} von ${bfAll} ausgewählt`;
+      if (bfBtn) bfBtn.textContent = `📤 ${bfChecked}× Beifang in Durchreiche legen`;
+    }
+
+    function toggleAllUebergabeChecks(kind, checkedState) {
+      const sel = kind === "bycatch" ? ".ueb-bycatch-check" : ".ueb-visit-check";
+      document.querySelectorAll(sel).forEach(el => { el.checked = Boolean(checkedState); });
+      updateUebergabeSelectedCounts();
+    }
+
+    function syncUebergabeListCollapseUI(kind, itemCount) {
+      const isSw = kind === "sw";
+      const listEl = document.getElementById(isSw ? "ueb-ready-list" : "ueb-bycatch-ready-list");
+      const btnEl = document.getElementById(isSw ? "ueb-ready-toggle-btn" : "ueb-bycatch-toggle-btn");
+      const lblEl = document.getElementById(isSw ? "ueb-ready-toggle-label" : "ueb-bycatch-toggle-label");
+      const arrEl = document.getElementById(isSw ? "ueb-ready-toggle-arrow" : "ueb-bycatch-toggle-arrow");
+      if (!listEl || !btnEl) return;
+
+      if (itemCount === 0) {
+        btnEl.style.display = "none";
+        listEl.style.display = "block";
+        return;
+      }
+
+      const pref = isSw ? __uebSwExpanded : __uebBycatchExpanded;
+      const expanded = pref !== null ? pref : (itemCount <= 5);
+      btnEl.style.display = "flex";
+      listEl.style.display = expanded ? "block" : "none";
+      const noun = isSw ? "Schwarzwild-Besuche" : "Beifang-Besuche";
+      if (lblEl) {
+        lblEl.textContent = expanded
+          ? `📋 ${itemCount} ${noun} ausblenden`
+          : `📋 ${itemCount} ${noun} anzeigen (zum Prüfen/Abhaken)`;
+      }
+      if (arrEl) arrEl.textContent = expanded ? "▾" : "▸";
+    }
+
+    function toggleUebergabeListCollapse(kind) {
+      if (kind === "sw") {
+        const listEl = document.getElementById("ueb-ready-list");
+        const curOpen = listEl ? listEl.style.display !== "none" : true;
+        __uebSwExpanded = !curOpen;
+        syncUebergabeListCollapseUI("sw", document.querySelectorAll(".ueb-visit-check").length);
+      } else {
+        const listEl = document.getElementById("ueb-bycatch-ready-list");
+        const curOpen = listEl ? listEl.style.display !== "none" : true;
+        __uebBycatchExpanded = !curOpen;
+        syncUebergabeListCollapseUI("bycatch", document.querySelectorAll(".ueb-bycatch-check").length);
+      }
     }
 
     async function renderUebergabeView() {
@@ -6836,6 +7582,7 @@
           if (sendBarEl) sendBarEl.style.display = "none";
           if (mergeBarEl) mergeBarEl.style.display = "none";
           readyListEl.innerHTML = `<div class="tile-sub" style="text-align:center; padding:10px 6px;">Aktuell keine neuen Schwarzwild-Besuche zur Übergabe offen. Bestätige Besuche zuerst im Tab <strong>🚦 Prüfen</strong>.</div>`;
+          syncUebergabeListCollapseUI("sw", 0);
         } else {
           if (sendBarEl) sendBarEl.style.display = "flex";
           if (mergeBarEl) mergeBarEl.style.display = readySw.length > 1 ? "block" : "none";
@@ -6861,11 +7608,12 @@
             return `
               <div class="ueb-card ${(possibleDup || needsTargetMap) ? "warn-dup" : ""}">
                 <div class="ueb-card-top">
-                  <input type="checkbox" class="ueb-check ueb-visit-check" data-visit-id="${escapeHTML(v.id)}" ${possibleDup ? "" : "checked"}>
+                  <input type="checkbox" class="ueb-check ueb-visit-check" data-visit-id="${escapeHTML(v.id)}" ${possibleDup ? "" : "checked"} onchange="updateUebergabeSelectedCounts()">
                   <div style="flex:1; min-width:0; font-size:0.76rem; line-height:1.4;">
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                       <strong style="color:#fff;">📍 ${escapeHTML(effectiveTarget)}</strong>
-                      <div style="display:flex; align-items:center; gap:5px;">
+                      <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                        ${v.isTrophy ? `<span class="pill pill-trophy">🏆 ${escapeHTML(v.trophyDetail || "Keiler")}</span>` : ""}
                         <span class="pill ${possibleDup ? "pill-yellow" : "pill-green"}">
                           ${possibleDup ? "⚠️ Evtl. schon in SMX" : `🐗 ${v.maxCount || 0}×`}
                         </span>
@@ -6876,7 +7624,7 @@
                       📅 ${escapeHTML(formatDateDE(v.startTs))} · 🕒 ${escapeHTML(timeRange)}
                     </div>
                     <div style="color:var(--accent-green); font-weight:800; font-size:0.72rem;">
-                      ${escapeHTML(boarTxt)}${v.rottenTag ? ` · 🏷️ ${escapeHTML(v.rottenTag)}` : ""}
+                      ${escapeHTML(boarTxt)}${v.rottenTag ? ` · 🏷️ ${escapeHTML(v.rottenTag)}` : ""}${v.trophyTag ? ` · 🎯 ${escapeHTML(v.trophyTag)}` : ""}
                     </div>
                     ${v.spotName && v.spotName !== effectiveTarget ? `<div style="color:var(--text-muted); font-size:0.69rem;">Kamera-Platz: ${escapeHTML(v.spotName)} (${escapeHTML(v.cameraName)})</div>` : ""}
                     ${mapSelectHtml}
@@ -6885,44 +7633,50 @@
               </div>
             `;
           }).join("");
+          syncUebergabeListCollapseUI("sw", readySw.length);
         }
       }
 
-      // 1B. Liste bereiter Beifang-Besuche (getrennt von Schwarzwild)
+      // 1B. Liste bereiter Beifang-Besuche (getrennt von Schwarzwild, inkl. sm_beifang_v1 Dublettenschutz)
       const bycatchListEl = document.getElementById("ueb-bycatch-ready-list");
       const bycatchSendBar = document.getElementById("ueb-bycatch-send-bar");
       if (bycatchListEl) {
         if (readyBycatch.length === 0) {
           if (bycatchSendBar) bycatchSendBar.style.display = "none";
-          bycatchListEl.innerHTML = `<div class="tile-sub" style="text-align:center; padding:8px 6px;">Aktuell keine neuen bestätigten Beifänge (Rehwild, Damwild, Raubwild, Wolf, Störung) zur Übergabe offen.</div>`;
+          bycatchListEl.innerHTML = `<div class="tile-sub" style="text-align:center; padding:8px 6px;">Aktuell keine neuen bestätigten Beifänge zur Übergabe offen.</div>`;
+          syncUebergabeListCollapseUI("bycatch", 0);
         } else {
           if (bycatchSendBar) bycatchSendBar.style.display = "flex";
           bycatchListEl.innerHTML = readyBycatch.map(v => {
             const targetKanzel = v.mappedKanzel || "";
             const effectiveTarget = targetKanzel || v.spotName || "Unbekannt";
+            const possibleDup = findPossibleBeifangDuplicate(v, effectiveTarget);
             const needsTargetMap = !targetKanzel && smSpots.length > 0;
+            const isSpecialAlert = ["WOLF", "SCHAKAL", "WILDKATZE", "BESONDERES"].includes(v.category);
             const timeRange = formatTimeHHMM(v.startTs) === formatTimeHHMM(v.endTs)
               ? `${formatTimeHHMM(v.startTs)} Uhr`
               : `${formatTimeHHMM(v.startTs)}–${formatTimeHHMM(v.endTs)} (${v.durationMin}m)`;
-            const pillCls = (v.category === "WOLF" || v.category === "STOERUNG") ? "pill-red" : "pill-yellow";
+            const pillCls = (v.category === "WOLF" || v.category === "SCHAKAL" || v.category === "WILDKATZE" || v.category === "STOERUNG") ? "pill-red" : "pill-yellow";
 
             const mapSelectHtml = needsTargetMap ? `
               <div style="margin-top:4px;">
-                <select class="app-select" style="padding:6px 8px; font-size:0.75rem; border-color:var(--accent-yellow);" onchange="assignVisitTargetKanzel('${escapeHTML(v.id)}', this.value)">
-                  <option value="">⚠️ Ziel-Kanzel für Sauenmatrix wählen (oder „${escapeHTML(v.spotName)}“ nutzen)</option>
+                <select class="app-select" style="padding:6px 8px; font-size:0.75rem; border-color:${isSpecialAlert ? "var(--accent-red)" : "var(--accent-yellow)"};" onchange="assignVisitTargetKanzel('${escapeHTML(v.id)}', this.value)">
+                  <option value="">${isSpecialAlert ? "🚨 Wichtige Sichtung: Ziel-Kanzel für Sauenmatrix zuordnen" : `⚠️ Ziel-Kanzel für Sauenmatrix wählen (oder „${escapeHTML(v.spotName)}“ nutzen)`}</option>
                   ${smSpots.map(s => `<option value="${escapeHTML(s.name)}">→ ${escapeHTML(s.name)} (${s.type === "FREIFLAECHE" ? "Freifläche" : "Kirrung"})</option>`).join("")}
                 </select>
               </div>
             ` : "";
 
             return `
-              <div class="ueb-card ${needsTargetMap ? "warn-dup" : ""}" style="border-left-color:${v.category === "WOLF" || v.category === "STOERUNG" ? "var(--accent-red)" : "var(--accent-yellow)"};">
+              <div class="ueb-card ${(possibleDup || needsTargetMap) ? "warn-dup" : ""}" style="border-left-color:${(isSpecialAlert || v.category === "STOERUNG") ? "var(--accent-red)" : "var(--accent-yellow)"};">
                 <div class="ueb-card-top">
-                  <input type="checkbox" class="ueb-check ueb-bycatch-check" data-visit-id="${escapeHTML(v.id)}" checked>
+                  <input type="checkbox" class="ueb-check ueb-bycatch-check" data-visit-id="${escapeHTML(v.id)}" ${possibleDup ? "" : "checked"} onchange="updateUebergabeSelectedCounts()">
                   <div style="flex:1; min-width:0; font-size:0.76rem; line-height:1.4;">
                     <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
                       <strong style="color:#fff;">📍 ${escapeHTML(effectiveTarget)}</strong>
-                      <div style="display:flex; align-items:center; gap:5px;">
+                      <div style="display:flex; align-items:center; gap:5px; flex-wrap:wrap;">
+                        ${v.isTrophy ? `<span class="pill pill-trophy">🏆 ${escapeHTML(v.trophyDetail || getTrophyTypeLabelDE(v.trophyType))}</span>` : ""}
+                        ${possibleDup ? `<span class="pill pill-yellow">⚠️ Evtl. schon in SMX</span>` : ""}
                         <span class="pill ${pillCls}">${escapeHTML(getCategoryLabelDE(v.category))}${v.maxCount > 0 ? ` · ${v.maxCount}×` : ""}</span>
                         <button type="button" class="btn-sm btn-no" style="padding:3px 7px; font-size:0.7rem;" onclick="openEditVisitModal('${escapeHTML(v.id)}')" title="Besuch korrigieren">✏️</button>
                       </div>
@@ -6931,7 +7685,7 @@
                       📅 ${escapeHTML(formatDateDE(v.startTs))} · 🕒 ${escapeHTML(timeRange)}
                     </div>
                     <div style="color:#ffe899; font-weight:700; font-size:0.72rem;">
-                      ${escapeHTML(v.speciesDetail || getCategoryLabelDE(v.category))}${v.notes ? ` · ${escapeHTML(v.notes)}` : ""}
+                      ${escapeHTML(v.speciesDetail || getCategoryLabelDE(v.category))}${v.trophyTag ? ` · 🎯 ${escapeHTML(v.trophyTag)}` : ""}${v.notes ? ` · ${escapeHTML(v.notes)}` : ""}
                     </div>
                     ${v.spotName && v.spotName !== effectiveTarget ? `<div style="color:var(--text-muted); font-size:0.69rem;">Kamera-Platz: ${escapeHTML(v.spotName)} (${escapeHTML(v.cameraName)})</div>` : ""}
                     ${mapSelectHtml}
@@ -6940,8 +7694,10 @@
               </div>
             `;
           }).join("");
+          syncUebergabeListCollapseUI("bycatch", readyBycatch.length);
         }
       }
+      updateUebergabeSelectedCounts();
 
       // 2. Aktueller Posteingang (sm_cam_inbox_v1)
       const inboxListEl = document.getElementById("ueb-inbox-list");
@@ -6970,12 +7726,12 @@
             const detailLine = isSw
               ? (counts.join(" · ") || `${entry.totalCount || 0}×`)
               : `${entry.speciesDetail || getCategoryLabelDE(entryCat)}${entry.totalCount ? ` · ${entry.totalCount}×` : ""}`;
-            const pillCls = isSw ? "pill-blue" : ((entryCat === "WOLF" || entryCat === "STOERUNG") ? "pill-red" : "pill-yellow");
+            const pillCls = isSw ? "pill-blue" : ((["WOLF", "SCHAKAL", "WILDKATZE", "STOERUNG"].includes(entryCat)) ? "pill-red" : "pill-yellow");
             return `
               <div class="ueb-card is-inbox" ${!isSw ? 'style="border-left-color:var(--accent-yellow);"' : ""}>
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
                   <div style="font-size:0.76rem; line-height:1.4; min-width:0;">
-                    <strong style="color:#fff;">${escapeHTML(headLabel)}</strong> <span class="pill ${pillCls}" style="margin-left:4px;">${escapeHTML(entry.status || (isSw ? "GREEN" : "BEIFANG"))}</span><br>
+                    <strong style="color:#fff;">${escapeHTML(headLabel)}</strong> <span class="pill ${pillCls}" style="margin-left:4px;">${escapeHTML(entry.status || (isSw ? "GREEN" : "BEIFANG"))}</span>${entry.isTrophy ? ` <span class="pill pill-trophy" style="margin-left:3px;">🏆 ${escapeHTML(entry.trophyDetail || getTrophyTypeLabelDE(entry.trophyType))}</span>` : ""}<br>
                     <span style="color:#d4f3dd; font-weight:700;">${escapeHTML(entry.date)} · ${escapeHTML(entry.arrival)}–${escapeHTML(entry.departure)} (${entry.durationMin}m)</span><br>
                     <span style="color:${isSw ? "var(--accent-green)" : "#ffe899"}; font-weight:800;">${escapeHTML(detailLine)}</span>
                     ${entry.note ? `<div style="color:var(--text-muted); font-size:0.7rem; margin-top:2px;">${escapeHTML(entry.note)}</div>` : ""}
@@ -6999,7 +7755,7 @@
             return `
             <div class="spot-row" style="padding:7px 9px; margin-bottom:6px;">
               <div style="font-size:0.73rem; line-height:1.35;">
-                <strong>${escapeHTML(catLbl)} ${escapeHTML(v.sentKanzel || v.mappedKanzel || v.spotName)}</strong> (${v.maxCount || 0}×)<br>
+                <strong>${escapeHTML(catLbl)} ${escapeHTML(v.sentKanzel || v.mappedKanzel || v.spotName)}</strong> (${v.maxCount || 0}×)${v.isTrophy ? ` <span class="pill pill-trophy" style="font-size:0.64rem;">🏆 ${escapeHTML(v.trophyDetail || getTrophyTypeLabelDE(v.trophyType))}</span>` : ""}<br>
                 <span style="color:var(--text-muted);">${escapeHTML(formatDateDE(v.startTs))} · ${escapeHTML(formatTimeHHMM(v.startTs))}–${escapeHTML(formatTimeHHMM(v.endTs))}${v.category !== "SCHWARZWILD" && v.speciesDetail ? ` · ${escapeHTML(v.speciesDetail)}` : ""}</span>
               </div>
               <button type="button" class="btn-sm btn-no" style="padding:4px 8px; font-size:0.7rem;" onclick="resetSentVisitToConfirmed('${escapeHTML(v.id)}')">↺ Erneut</button>
@@ -7187,7 +7943,8 @@
           ? `${formatTimeHHMM(v.startTs)}`
           : `${formatTimeHHMM(v.startTs)}–${formatTimeHHMM(v.endTs)} (${v.durationMin}m)`;
         const boar = v.category === "SCHWARZWILD" ? formatBoarBreakdownText(v.boarBreakdown) : "";
-        const extra = [boar, v.rottenTag ? `Rotte: ${v.rottenTag}` : "", v.notes].filter(Boolean).join(" · ");
+        const trophyTxt = v.isTrophy ? `🏆 ${v.trophyDetail || getTrophyTypeLabelDE(v.trophyType)}${v.trophyTag ? " (" + v.trophyTag + ")" : ""}` : "";
+        const extra = [trophyTxt, boar, v.rottenTag ? `Rotte: ${v.rottenTag}` : "", v.notes].filter(Boolean).join(" · ");
         lines.push(`• ${v.spotName} | ${tStr} | ${getCategoryLabelDE(v.category)} (${v.speciesDetail}, ${v.maxCount || 0}×)${extra ? " — " + extra : ""}`);
       });
 
@@ -7217,7 +7974,7 @@
 
       const payload = {
         app: "Ueberlaeufer",
-        version: "0.5.4",
+        version: "0.5.5",
         exportedAt: new Date().toISOString(),
         preferences: {
           packSize: getPackSizePref(),
@@ -7793,7 +8550,7 @@
           }
 
           const targets = [
-            Math.max(0.15, duration * 0.15),
+            Math.min(Math.max(0.08, 0.12), Math.max(0.08, duration - 0.15)),
             Math.max(0.3, duration * 0.50),
             Math.max(0.5, Math.min(duration - 0.15, duration * 0.85))
           ];
@@ -7946,7 +8703,7 @@
 
         const exifRows = isVid ? `
           <tr><td>Video-Dauer</td><td>${r.duration ? r.duration.toFixed(1) + " Sek." : "—"}</td></tr>
-          <tr><td>Extrahierte Frames</td><td>${r.frames.length} Stück (15% / 50% / 85%)</td></tr>
+          <tr><td>Extrahierte Frames</td><td>${r.frames.length} Stück (Start ~0,1s / 50% / 85%)</td></tr>
         ` : `
           <tr><td>EXIF Hersteller / Modell</td><td>${escapeHTML([r.exif?.make, r.exif?.model].filter(Boolean).join(" · ") || "nicht vorhanden")}</td></tr>
           <tr><td>EXIF Aufnahmezeit</td><td style="color:${r.exif?.dateTimeOriginal ? "var(--accent-green)" : "var(--accent-yellow)"};">${escapeHTML(r.exif?.dateTimeOriginal || r.exif?.dateTime || "fehlt → Infobalken-OCR nötig")}</td></tr>
@@ -8025,18 +8782,19 @@
         document.body.classList.add("night-dimmed");
       }
       syncNightDimButtons();
-      applyLogoEverywhere(null);
       loadApiKeyUI();
       loadAiPreferencesUI();
       syncVisitGapSelectors();
 
+      let loadedLogo = null;
       try {
         await openUeberlaeuferDB();
         const savedLogo = await idbGet("meta", "customLogo");
         if (savedLogo && savedLogo.value) {
-          applyLogoEverywhere(savedLogo.value);
+          loadedLogo = savedLogo.value;
         }
       } catch (e) {}
+      applyLogoEverywhere(loadedLogo);
 
       try {
         const existingDoneFps = (await idbGetAll("queue").catch(() => []))

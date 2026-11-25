@@ -11,7 +11,7 @@
   <link id="dynamic-favicon" rel="icon" type="image/png">
   <link id="dynamic-touch-icon" rel="apple-touch-icon">
   <link id="dynamic-manifest" rel="manifest">
-  <title>Überläufer v0.5.3 – SD-Kamera KI-Auswerter</title>
+  <title>Überläufer v0.5.4 – SD-Kamera KI-Auswerter</title>
   <style>
     :root {
       --bg-main: #0b130e;
@@ -1382,7 +1382,7 @@
 
     <div id="home-logo-wrap" onclick="switchTab('import')" title="Zum SD-Stapel-Import"></div>
     <div class="home-brand-title">Überläufer</div>
-    <div class="home-brand-sub">SD-Kamera KI-Auswerter · v0.5.3</div>
+    <div class="home-brand-sub">SD-Kamera KI-Auswerter · v0.5.4</div>
 
     <div class="home-status-pill" onclick="switchTab('kameras')" id="home-status-pill">
       <span class="status-dot" id="home-sm-dot"></span>
@@ -1400,7 +1400,7 @@
   <header class="app-header">
     <div class="header-left">
       <div class="header-top-row">
-        <span class="header-title-pill">🐗 Überläufer <span style="font-size:0.68rem; color:var(--accent-green);">v0.5.3</span></span>
+        <span class="header-title-pill">🐗 Überläufer <span style="font-size:0.68rem; color:var(--accent-green);">v0.5.4</span></span>
         <button type="button" class="icon-pill-btn" id="btn-night-dim" onclick="toggleNightDim()" title="Nacht-Dimmung">🌙</button>
         <span class="status-badge" id="header-db-badge">
           <span class="status-dot" id="header-db-dot"></span>
@@ -1457,16 +1457,26 @@
         </div>
 
         <input type="file" id="batch-file-input" multiple accept="image/*,video/*,.jpg,.jpeg,.mp4,.mov" style="display:none;" onchange="handleBatchImportFiles(event)">
+        <input type="file" id="batch-folder-input" multiple style="display:none;" onchange="handleBatchImportFiles(event)">
 
-        <button type="button" class="btn-hero" id="btn-start-batch-import" onclick="triggerBatchFilePicker()">
+        <button type="button" class="btn-hero" id="btn-start-batch-import" onclick="triggerBatchFilePicker('media')">
           📂 SD-Stapel auswählen &amp; vorbereiten (.JPG / .MP4)
         </button>
+        <button type="button" class="btn-sm btn-no" id="btn-start-folder-import" style="width:100%; margin-top:8px; padding:11px 12px; font-size:0.84rem; border-color:var(--tile-green-border);" onclick="triggerBatchFilePicker('filemanager')">
+          📁 Aus Dateimanager / Ordner wählen (300+ Dateien)
+        </button>
+        <div style="font-size:0.69rem; color:var(--text-muted); margin-top:5px; line-height:1.35;">
+          Tipp für große SD-Ordner: Der Dateimanager-Button umgeht das Android-Fotoauswahl-Limit (100 Dateien) und bietet „Alle auswählen“. Nicht-Medien-Dateien werden automatisch übersprungen.
+        </div>
 
         <!-- Live-Fortschritt beim sequenziellen Verarbeiten -->
         <div class="progress-wrap" id="import-progress-wrap">
-          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+          <div style="display:flex; justify-content:space-between; align-items:center; gap:8px; flex-wrap:wrap;">
             <span id="import-progress-title" style="font-size:0.8rem; font-weight:900; color:var(--accent-green);">Verarbeite…</span>
-            <button type="button" class="btn-sm btn-danger" style="padding:4px 9px; font-size:0.72rem;" onclick="abortBatchImport()">⏹️ Stopp</button>
+            <div style="display:flex; align-items:center; gap:6px;">
+              <span class="pill pill-blue" id="import-wakelock-pill" style="display:none;">🔆 Display wach</span>
+              <button type="button" class="btn-sm btn-danger" style="padding:4px 9px; font-size:0.72rem;" onclick="abortBatchImport()">⏹️ Stopp</button>
+            </div>
           </div>
           <div class="progress-bar-bg">
             <div class="progress-bar-fill" id="import-progress-bar"></div>
@@ -1541,8 +1551,19 @@
             </div>
           </div>
 
+          <!-- Optionales Durchlauf-Limit vor KI-Start -->
+          <div style="display:flex; gap:8px; align-items:center; margin-top:9px;">
+            <label class="app-label" style="margin-bottom:0; white-space:nowrap; font-size:0.74rem; color:#d7ebd9;" for="ai-run-limit-select">Durchlauf-Limit:</label>
+            <select id="ai-run-limit-select" class="app-select" style="flex:1; padding:6px 9px; font-size:0.78rem;" onchange="saveAiRunLimitPref(this.value)">
+              <option value="0" selected>Alle offenen Dateien</option>
+              <option value="25">25 Dateien pro Durchlauf</option>
+              <option value="50">50 Dateien pro Durchlauf</option>
+              <option value="100">100 Dateien pro Durchlauf</option>
+            </select>
+          </div>
+
           <!-- Start / Pause / Stopp Buttons -->
-          <div style="display:flex; gap:8px; margin-top:10px; flex-wrap:wrap;">
+          <div style="display:flex; gap:8px; margin-top:9px; flex-wrap:wrap;">
             <button type="button" class="btn-hero" id="btn-ai-start" style="flex:1; padding:11px;" onclick="startGeminiQueueWorker()">
               ▶️ KI-Auswertung starten
             </button>
@@ -1555,12 +1576,12 @@
           </div>
         </div>
 
-        <!-- Importierte SD-Stapel -->
+        <!-- Offene SD-Stapel (fertige Dateien fallen automatisch raus) -->
         <div id="queue-batches-list" style="margin-top:12px;"></div>
 
         <div id="queue-footer-actions" style="display:none; margin-top:10px; gap:8px;">
           <button type="button" class="btn-sm btn-no" style="flex:1;" onclick="switchTab('pruefen')">🚦 Fertige Ergebnisse ansehen</button>
-          <button type="button" class="btn-sm btn-danger" onclick="clearEntireQueue()">🗑️ Alles leeren</button>
+          <button type="button" class="btn-sm btn-danger" id="btn-clear-pending-queue" onclick="clearEntireQueue()">🗑️ Offene leeren</button>
         </div>
       </div>
 
@@ -1750,16 +1771,16 @@
 
         <div class="stat-grid-3" style="margin-bottom:11px;">
           <div class="stat-box">
-            <div class="stat-box-label">🐗 Bereit</div>
+            <div class="stat-box-label">🐗 SW bereit</div>
             <div class="stat-box-val" id="ueb-confirmed-sw-val" style="color:var(--accent-green);">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-box-label">🦌 Beifang bereit</div>
+            <div class="stat-box-val" id="ueb-confirmed-other-val" style="color:var(--accent-yellow);">0</div>
           </div>
           <div class="stat-box">
             <div class="stat-box-label">📬 Im Posteingang</div>
             <div class="stat-box-val" id="ueb-inbox-count-val" style="color:#9bc2ff;">0</div>
-          </div>
-          <div class="stat-box">
-            <div class="stat-box-label">🦌 Beifang fertig</div>
-            <div class="stat-box-val" id="ueb-confirmed-other-val">0</div>
           </div>
         </div>
 
@@ -1781,7 +1802,26 @@
             </select>
           </div>
           <button type="button" class="btn-hero" id="btn-push-inbox" onclick="pushSelectedVisitsToInbox()">
-            📤 Ausgewählte in Durchreiche legen (sm_cam_inbox_v1)
+            📤 Schwarzwild in Durchreiche legen (sm_cam_inbox_v1)
+          </button>
+        </div>
+      </div>
+
+      <!-- 1B. Bestätigte Beifänge getrennt übergebbar (Reh, Damwild, Raubwild, Wolf, Störung) -->
+      <div class="tile-dark" style="border-color:var(--tile-olive-border);">
+        <div class="tile-title-row" style="margin-bottom:6px;">
+          <span class="tile-title">🦌 Beifang-Durchreiche (vorbereitet)</span>
+          <span class="pill pill-yellow" id="ueb-bycatch-ready-pill">0 bereit</span>
+        </div>
+        <p class="tile-sub" style="margin-bottom:10px;">
+          Bestätigte Sichtungen aus <strong>Rehwild, Damwild, Raubwild, Wolf &amp; Störungen</strong> – sauber getrennt von Schwarzwild, mit <code>category</code> &amp; <code>speciesDetail</code> im Paket für den kommenden Beifang-Reiter in der Sauenmatrix.
+        </p>
+
+        <div id="ueb-bycatch-ready-list"></div>
+
+        <div id="ueb-bycatch-send-bar" style="display:none; margin-top:10px; flex-direction:column; gap:7px;">
+          <button type="button" class="btn-sm btn-warn" id="btn-push-bycatch-inbox" style="width:100%; padding:11px; font-size:0.86rem;" onclick="pushSelectedBycatchToInbox()">
+            📤 Ausgewählte Beifänge in Durchreiche legen (sm_cam_inbox_v1)
           </button>
         </div>
       </div>
@@ -1987,7 +2027,7 @@
       <div class="tile-dark">
         <div class="tile-title-row" style="margin-bottom:6px;">
           <span class="tile-title" style="font-size:0.88rem;">🛠️ System &amp; Version</span>
-          <span class="pill pill-green">Überläufer v0.5.3</span>
+          <span class="pill pill-green">Überläufer v0.5.4</span>
         </div>
         <div class="tile-sub" id="setup-system-info">
           IndexedDB: prüfe…
@@ -3254,9 +3294,28 @@
       }
     }
 
-    function triggerBatchFilePicker() {
+    function classifyImportMediaFile(file) {
+      if (!file || Number(file.size || 0) <= 0) return null;
+      const rawName = String(file.name || "");
+      if (rawName.startsWith("._") || rawName === ".DS_Store" || rawName === "Thumbs.db") return null;
+      const lower = rawName.toLowerCase();
+      const type = String(file.type || "").toLowerCase();
+      if (type.startsWith("video/") || /\.(mp4|mov|m4v|avi|mkv|webm|3gp)$/.test(lower)) {
+        return "VIDEO";
+      }
+      if (type.startsWith("image/") || /\.(jpg|jpeg|png|webp|bmp|gif|heic|heif)$/.test(lower)) {
+        return "IMAGE";
+      }
+      return null;
+    }
+
+    function triggerBatchFilePicker(mode = "media") {
       if (__isImporting) {
         showToast("⏳ Import läuft bereits…");
+        return;
+      }
+      if (__aiWorkerState !== "IDLE") {
+        showToast("⏸️ Bitte erst KI-Auswertung pausieren oder abwarten");
         return;
       }
       const spotKey = document.getElementById("import-spot-select")?.value || "";
@@ -3274,7 +3333,8 @@
       } else {
         safeSetItem("ul_last_spot_key_v1", spotKey);
       }
-      document.getElementById("batch-file-input")?.click();
+      const targetId = mode === "filemanager" ? "batch-folder-input" : "batch-file-input";
+      document.getElementById(targetId)?.click();
     }
 
     function abortBatchImport() {
@@ -3605,86 +3665,104 @@
       __importAbortFlag = false;
 
       const btnStart = document.getElementById("btn-start-batch-import");
+      const btnFolder = document.getElementById("btn-start-folder-import");
       const progWrap = document.getElementById("import-progress-wrap");
       const progTitle = document.getElementById("import-progress-title");
       const progBar = document.getElementById("import-progress-bar");
       const progDetail = document.getElementById("import-progress-detail");
 
       if (btnStart) btnStart.disabled = true;
+      if (btnFolder) btnFolder.disabled = true;
       if (progWrap) progWrap.style.display = "block";
       if (progBar) progBar.style.width = "2%";
-
-      const camId = document.getElementById("import-camera-select")?.value || "";
-      const cam = __cachedCameras.find(c => c.id === camId) || null;
-      const spotKey = document.getElementById("import-spot-select")?.value || "";
-      const allSpots = await getAllAvailableSpots();
-      const spot = allSpots.find(s => s.key === spotKey) || null;
-      const skipDups = Boolean(document.getElementById("import-skip-dups")?.checked);
-
-      const existingQueue = await idbGetAll("queue").catch(() => []);
-      const seenRec = await idbGet("meta", "seen_fingerprints").catch(() => null);
-      const seenList = Array.isArray(seenRec?.value) ? seenRec.value : [];
-      const knownFingerprints = new Set([...existingQueue.map(x => x.fingerprint), ...seenList]);
 
       const batchId = "batch_" + Date.now();
       let added = 0;
       let skippedDups = 0;
+      let skippedNonMedia = 0;
       let errors = 0;
       let suspectCount = 0;
 
-      for (let i = 0; i < files.length; i++) {
-        if (__importAbortFlag) break;
-        const f = files[i];
-        const pct = Math.round(((i + 1) / files.length) * 100);
-        if (progTitle) progTitle.textContent = `Verarbeite ${i + 1} / ${files.length} (${pct}%)`;
-        if (progBar) progBar.style.width = `${pct}%`;
-        if (progDetail) progDetail.textContent = `${f.name} · Neu: ${added} · Dubletten: ${skippedDups}${errors ? " · Fehler: " + errors : ""}`;
+      try {
+        await acquireScreenWakeLock();
 
-        await yieldToUI();
+        const camId = document.getElementById("import-camera-select")?.value || "";
+        const cam = __cachedCameras.find(c => c.id === camId) || null;
+        const spotKey = document.getElementById("import-spot-select")?.value || "";
+        const allSpots = await getAllAvailableSpots();
+        const spot = allSpots.find(s => s.key === spotKey) || null;
+        const skipDups = Boolean(document.getElementById("import-skip-dups")?.checked);
 
-        try {
-          const fingerprint = await computeLocalFingerprint(f);
-          if (skipDups && knownFingerprints.has(fingerprint)) {
-            skippedDups++;
+        const existingQueue = await idbGetAll("queue").catch(() => []);
+        const seenRec = await idbGet("meta", "seen_fingerprints").catch(() => null);
+        const seenList = Array.isArray(seenRec?.value) ? seenRec.value : [];
+        const knownFingerprints = new Set([...existingQueue.map(x => x.fingerprint), ...seenList]);
+
+        for (let i = 0; i < files.length; i++) {
+          if (__importAbortFlag) break;
+          const f = files[i];
+          const pct = Math.round(((i + 1) / files.length) * 100);
+          if (progTitle) progTitle.textContent = `Verarbeite ${i + 1} / ${files.length} (${pct}%)`;
+          if (progBar) progBar.style.width = `${pct}%`;
+          if (progDetail) {
+            progDetail.textContent = `${f.name} · Neu: ${added} · Dubletten: ${skippedDups}${skippedNonMedia ? " · Ignoriert: " + skippedNonMedia : ""}${errors ? " · Fehler: " + errors : ""}`;
+          }
+
+          await yieldToUI();
+
+          const mediaKind = classifyImportMediaFile(f);
+          if (!mediaKind) {
+            skippedNonMedia++;
             continue;
           }
 
-          const metaCtx = {
-            batchId,
-            fingerprint,
-            cameraId: cam ? cam.id : "",
-            cameraName: cam ? cam.name : "Ohne Profil",
-            stripPosition: cam ? (cam.stripPosition || "auto") : "auto",
-            defaultOffsetMin: cam ? Number(cam.defaultOffsetMin || 0) : 0,
-            spotKey: spot ? spot.key : "",
-            spotName: spot ? spot.name : "Unbekannter Standort",
-            mappedKanzel: spot ? (spot.mappedKanzel || "") : ""
-          };
+          try {
+            const fingerprint = await computeLocalFingerprint(f);
+            if (skipDups && knownFingerprints.has(fingerprint)) {
+              skippedDups++;
+              continue;
+            }
 
-          const lower = f.name.toLowerCase();
-          const isVideo = f.type.startsWith("video/") || /\.(mp4|mov|avi|mkv|webm)$/.test(lower);
-          const item = isVideo
-            ? await processSingleVideoForQueue(f, metaCtx)
-            : await processSingleImageForQueue(f, metaCtx);
+            const metaCtx = {
+              batchId,
+              fingerprint,
+              cameraId: cam ? cam.id : "",
+              cameraName: cam ? cam.name : "Ohne Profil",
+              stripPosition: cam ? (cam.stripPosition || "auto") : "auto",
+              defaultOffsetMin: cam ? Number(cam.defaultOffsetMin || 0) : 0,
+              spotKey: spot ? spot.key : "",
+              spotName: spot ? spot.name : "Unbekannter Standort",
+              mappedKanzel: spot ? (spot.mappedKanzel || "") : ""
+            };
 
-          await idbPut("queue", item);
-          knownFingerprints.add(fingerprint);
-          added++;
-          if (item.timeSuspect) suspectCount++;
-        } catch (err) {
-          errors++;
+            const item = mediaKind === "VIDEO"
+              ? await processSingleVideoForQueue(f, metaCtx)
+              : await processSingleImageForQueue(f, metaCtx);
+
+            await idbPut("queue", item);
+            knownFingerprints.add(fingerprint);
+            added++;
+            if (item.timeSuspect) suspectCount++;
+          } catch (err) {
+            errors++;
+          }
         }
+      } finally {
+        __isImporting = false;
+        if (__aiWorkerState === "IDLE") {
+          await releaseScreenWakeLock();
+        }
+        if (btnStart) btnStart.disabled = false;
+        if (btnFolder) btnFolder.disabled = false;
+        if (progWrap) progWrap.style.display = "none";
       }
-
-      __isImporting = false;
-      if (btnStart) btnStart.disabled = false;
-      if (progWrap) progWrap.style.display = "none";
 
       await renderQueueOverview();
       await refreshDiagnostics();
 
       let msg = `✅ ${added} neu in Warteschlange`;
       if (skippedDups > 0) msg += ` · ${skippedDups} Dublette(n) übersprungen`;
+      if (skippedNonMedia > 0) msg += ` · ${skippedNonMedia} Nicht-Medien ignoriert`;
       if (errors > 0) msg += ` · ${errors} Fehler`;
       showToast(msg);
 
@@ -3743,6 +3821,18 @@
       return [4, 8, 13].includes(v) ? v : 13;
     }
 
+    function getAiRunLimitPref() {
+      const v = Number(safeGetItem("ul_run_limit_v1", "0"));
+      return [0, 25, 50, 100].includes(v) ? v : 0;
+    }
+
+    function saveAiRunLimitPref(val) {
+      const n = Number(val) || 0;
+      const clean = [0, 25, 50, 100].includes(n) ? n : 0;
+      safeSetItem("ul_run_limit_v1", String(clean));
+      renderQueueOverview();
+    }
+
     function saveAiPreferences() {
       const ps = document.getElementById("setup-pack-size")?.value || "5";
       const pace = document.getElementById("setup-pace-sec")?.value || "13";
@@ -3755,8 +3845,10 @@
     function loadAiPreferencesUI() {
       const psEl = document.getElementById("setup-pack-size");
       const paceEl = document.getElementById("setup-pace-sec");
+      const limEl = document.getElementById("ai-run-limit-select");
       if (psEl) psEl.value = String(getPackSizePref());
       if (paceEl) paceEl.value = String(getPaceSecPref());
+      if (limEl) limEl.value = String(getAiRunLimitPref());
     }
 
     async function loadQuotaState() {
@@ -3806,17 +3898,25 @@
       showToast("🔓 Tages-Sperre aufgehoben");
     }
 
+    function syncWakeLockPills(active) {
+      const show = Boolean(active);
+      ["tacho-wakelock-pill", "import-wakelock-pill"].forEach(id => {
+        const pill = document.getElementById(id);
+        if (pill) pill.style.display = show ? "inline-flex" : "none";
+      });
+    }
+
     async function acquireScreenWakeLock() {
       try {
-        if ("wakeLock" in navigator && !__wakeLockSentinel) {
-          __wakeLockSentinel = await navigator.wakeLock.request("screen");
-          __wakeLockSentinel.addEventListener("release", () => {
-            __wakeLockSentinel = null;
-            const pill = document.getElementById("tacho-wakelock-pill");
-            if (pill) pill.style.display = "none";
-          });
-          const pill = document.getElementById("tacho-wakelock-pill");
-          if (pill) pill.style.display = "inline-flex";
+        if ("wakeLock" in navigator) {
+          if (!__wakeLockSentinel) {
+            __wakeLockSentinel = await navigator.wakeLock.request("screen");
+            __wakeLockSentinel.addEventListener("release", () => {
+              __wakeLockSentinel = null;
+              syncWakeLockPills(false);
+            });
+          }
+          syncWakeLockPills(true);
         }
       } catch (e) {}
     }
@@ -3828,12 +3928,11 @@
           __wakeLockSentinel = null;
         }
       } catch (e) {}
-      const pill = document.getElementById("tacho-wakelock-pill");
-      if (pill) pill.style.display = "none";
+      syncWakeLockPills(false);
     }
 
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible" && __aiWorkerState !== "IDLE") {
+      if (document.visibilityState === "visible" && (__aiWorkerState !== "IDLE" || __isImporting)) {
         acquireScreenWakeLock();
       }
     });
@@ -3879,6 +3978,7 @@
       const btnPause = document.getElementById("btn-ai-pause");
       const btnStop = document.getElementById("btn-ai-stop");
       const progWrap = document.getElementById("ai-progress-wrap");
+      const limSel = document.getElementById("ai-run-limit-select");
 
       const running = (__aiWorkerState !== "IDLE");
       if (btnStart) {
@@ -3888,6 +3988,7 @@
       if (btnPause) btnPause.style.display = running ? "inline-flex" : "none";
       if (btnStop) btnStop.style.display = running ? "inline-flex" : "none";
       if (progWrap) progWrap.style.display = running ? "block" : "none";
+      if (limSel) limSel.disabled = running;
     }
 
     function blobToBase64Pure(blob) {
@@ -4043,11 +4144,12 @@
             "Regeln für die Auswertung:",
             "1. Bestimme für jeden Eintrag die Hauptkategorie (SCHWARZWILD, REHWILD, DAMWILD, RAUBWILD, WOLF, HAUSTIER, VOGEL, STOERUNG für Mensch/Fahrzeug/Traktor, LEERBILD wenn kein Tier/Mensch erkennbar, oder UNKLAR).",
             "2. Sei KONSERVATIV: Wenn bei Nacht/IR, Nebel, Bewegung oder Gestrüpp nicht sicher erkennbar ist, ob es Wild oder nur ein Ast/Lichtreflex ist, wähle UNKLAR und setze isUncertain=true.",
-            "3. Zähle bei totalCount das Maximum gleichzeitig sichtbarer Individuen auf EINEM Bild des Eintrags (nicht über Video-Frames addieren!).",
-            "4. Bei SCHWARZWILD: Verteile totalCount auf boarBreakdown. Nur wenn Geschlecht/Klasse wirklich sicher erkennbar ist (z. B. Pinsel/Waffen -> keiler, Striche/führend -> bache, typische Streifen/geringe Größe -> frischling), nutze die exakten Klassen. Bei unsicherer Größe/Geschlecht nutze grossUnklar (erwachsene/starke Sau unklar), kleinUnklar (mittel/klein unklar) oder unbekannt (nur Schemen/Lichter). Die Summe in boarBreakdown muss totalCount entsprechen; bei Nicht-Schwarzwild alle Werte 0.",
-            "5. Lies falls vorhanden den eingebrannten Kamera-Infobalken ab: ocrTimestamp im Format 'YYYY-MM-DD HH:MM:SS' (oder '' falls nicht lesbar) und ocrTempC (z. B. '4°C' oder '').",
-            "6. bestFrameIndex: Bei Fotos 0; bei Videos der Index (0, 1 oder 2) des Standbilds, auf dem das Wild am deutlichsten zu sehen ist.",
-            "7. notes: Kurze, präzise deutsche Beschreibung (max. 95 Zeichen)."
+            "3. WICHTIGE ABGRENZUNG SCHWARZWILD vs. DACHS / WASCHBÄR (Nacht/IR): Verwechsle einzelne, tief und gedrungen gebaute Tiere in Bodennähe nicht vorschnell mit Schwarzwild! Prüfe bei einzelnen kleineren bis mittelgroßen dunklen Tieren gezielt auf: Gesichtsstreifen oder Gesichtsmaske (Dachs: schwarz-weiße Kopfstreifen, keilförmiger Kopf; Waschbär: dunkle Augenmaske), sehr niedrigen bodennahen Körperbau mit kurzen Läufen, buschigen oder geringelten Schwanz (Waschbär) sowie das Größenverhältnis zu Kirrgut, Ästen, Laub und Baumstämmen. Wähle SCHWARZWILD nur, wenn typische Sauen-Merkmale (Wurf/Rüsselscheibe, hochläufigerer Körper mit abfallendem Rücken, Pürzel, passende Körpergröße) wirklich erkennbar sind. Bei Dachs oder Waschbär wähle RAUBWILD (speciesDetail: 'Dachs' bzw. 'Waschbär'); im Zweifel lieber RAUBWILD oder UNKLAR mit isUncertain=true (Gelb) statt vorschnell SCHWARZWILD.",
+            "4. Zähle bei totalCount das Maximum gleichzeitig sichtbarer Individuen auf EINEM Bild des Eintrags (nicht über Video-Frames addieren!).",
+            "5. Bei SCHWARZWILD: Verteile totalCount auf boarBreakdown. Nur wenn Geschlecht/Klasse wirklich sicher erkennbar ist (z. B. Pinsel/Waffen -> keiler, Striche/führend -> bache, typische Streifen/geringe Größe -> frischling), nutze die exakten Klassen. Bei unsicherer Größe/Geschlecht nutze grossUnklar (erwachsene/starke Sau unklar), kleinUnklar (mittel/klein unklar) oder unbekannt (nur Schemen/Lichter). Die Summe in boarBreakdown muss totalCount entsprechen; bei Nicht-Schwarzwild alle Werte 0.",
+            "6. Lies falls vorhanden den eingebrannten Kamera-Infobalken ab: ocrTimestamp im Format 'YYYY-MM-DD HH:MM:SS' (oder '' falls nicht lesbar) und ocrTempC (z. B. '4°C' oder '').",
+            "7. bestFrameIndex: Bei Fotos 0; bei Videos der Index (0, 1 oder 2) des Standbilds, auf dem das Wild am deutlichsten zu sehen ist.",
+            "8. notes: Kurze, präzise deutsche Beschreibung (max. 95 Zeichen)."
           ].join("\n")
         }
       ];
@@ -4303,7 +4405,8 @@
       __aiWorkerState = "RUNNING";
       await acquireScreenWakeLock();
 
-      const totalAtStart = pendingAll.length;
+      const runLimit = getAiRunLimitPref();
+      const totalAtStart = runLimit > 0 ? Math.min(pendingAll.length, runLimit) : pendingAll.length;
       let processedInRun = 0;
       let consecutiveRpmRetries = 0;
       let consecutiveServerRetries = 0;
@@ -4334,37 +4437,63 @@
             break;
           }
 
-          const currentQueue = sortPendingQueueItems(
+          const rawPending = sortPendingQueueItems(
             (await idbGetAll("queue").catch(() => [])).filter(x => x.status === "PENDING")
           );
 
+          // Defekte Einträge ohne Bilddaten vorab sauber aussortieren, damit Limit & Paketbau nie hängen bleiben
+          const currentQueue = [];
+          const brokenFps = [];
+          let brokenMoved = 0;
+          for (const qItem of rawPending) {
+            if (!Array.isArray(qItem.aiBlobs) || qItem.aiBlobs.length === 0) {
+              const fallbackItem = applyAiResultToQueueItem(qItem, {
+                category: "UNKLAR",
+                speciesDetail: "Bilddaten fehlen",
+                confidence: "NIEDRIG",
+                isUncertain: true,
+                totalCount: 0,
+                boarBreakdown: emptyBoarBreakdown(),
+                bestFrameIndex: 0,
+                ocrTimestamp: "",
+                ocrTempC: "",
+                notes: "Keine Bilddaten mehr vorhanden – bitte prüfen"
+              }, "LOKAL");
+              await idbPut("queue", fallbackItem);
+              if (fallbackItem.fingerprint) brokenFps.push(fallbackItem.fingerprint);
+              brokenMoved++;
+            } else {
+              currentQueue.push(qItem);
+            }
+          }
+          if (brokenFps.length > 0) {
+            await recordSeenFingerprints(brokenFps);
+          }
+
           if (currentQueue.length === 0) {
-            updateTachoUI("Fertig ✅", "pill-green", `Alle ${totalAtStart} Dateien erfolgreich ausgewertet!`);
-            showToast(`✅ Fertig! ${processedInRun} Datei(en) ausgewertet`);
+            if (brokenMoved > 0 && processedInRun === 0) {
+              updateTachoUI("Hinweis", "pill-yellow", `⚠️ ${brokenMoved} Eintrag/Einträge ohne Bilddaten als „Unklar“ verschoben.`);
+            } else {
+              updateTachoUI("Fertig ✅", "pill-green", `Alle ${processedInRun} Dateien erfolgreich ausgewertet!`);
+              showToast(`✅ Fertig! ${processedInRun} Datei(en) ausgewertet`);
+            }
             break;
           }
 
-          const { packet, imageCount } = buildNextAiPacket(currentQueue, packSize);
+          const leftInRun = runLimit > 0 ? (runLimit - processedInRun) : currentQueue.length;
+          if (leftInRun <= 0) {
+            updateTachoUI(
+              "Limit erreicht ✅",
+              "pill-green",
+              `Durchlauf-Limit (${processedInRun} Dateien) abgeschlossen! Noch ${currentQueue.length} Datei(en) offen in der Warteschlange.`
+            );
+            showToast(`✅ Durchlauf-Limit erreicht (${processedInRun} fertig · ${currentQueue.length} offen)`);
+            break;
+          }
+
+          const eligibleQueue = runLimit > 0 ? currentQueue.slice(0, leftInRun) : currentQueue;
+          const { packet, imageCount } = buildNextAiPacket(eligibleQueue, packSize);
           if (packet.length === 0) {
-            // Defekte Einträge ohne Bilddaten abfangen, damit die Warteschlange nicht hängen bleibt
-            for (const broken of currentQueue) {
-              if (!Array.isArray(broken.aiBlobs) || broken.aiBlobs.length === 0) {
-                const fallbackItem = applyAiResultToQueueItem(broken, {
-                  category: "UNKLAR",
-                  speciesDetail: "Bilddaten fehlen",
-                  confidence: "NIEDRIG",
-                  isUncertain: true,
-                  totalCount: 0,
-                  boarBreakdown: emptyBoarBreakdown(),
-                  bestFrameIndex: 0,
-                  ocrTimestamp: "",
-                  ocrTempC: "",
-                  notes: "Keine Bilddaten mehr vorhanden – bitte prüfen"
-                }, "LOKAL");
-                await idbPut("queue", fallbackItem);
-              }
-            }
-            updateTachoUI("Hinweis", "pill-yellow", "⚠️ Einträge ohne Bilddaten wurden als „Unklar“ verschoben.");
             break;
           }
 
@@ -4391,9 +4520,14 @@
               if (!resByIdx.has(idx)) resByIdx.set(idx, r);
             });
 
+            const doneFingerprints = [];
             for (let i = 0; i < packet.length; i++) {
               const updated = applyAiResultToQueueItem(packet[i], resByIdx.get(i) || null, modelName);
               await idbPut("queue", updated);
+              if (updated.fingerprint) doneFingerprints.push(updated.fingerprint);
+            }
+            if (doneFingerprints.length > 0) {
+              await recordSeenFingerprints(doneFingerprints);
             }
 
             curQuota.requestsToday = (curQuota.requestsToday || 0) + 1;
@@ -4412,11 +4546,20 @@
 
             await renderQueueOverview();
 
-            // Prüfen, ob noch weitere Dateien warten
+            // Prüfen, ob noch weitere Dateien warten oder Durchlauf-Limit erreicht wurde
             const remaining = currentQueue.length - packet.length;
             if (remaining <= 0) {
-              updateTachoUI("Fertig ✅", "pill-green", `Alle ${totalAtStart} Dateien ausgewertet! Letztes Paket: ${sampleSpecies}`);
-              showToast(`✅ Alle ${totalAtStart} Dateien ausgewertet!`);
+              updateTachoUI("Fertig ✅", "pill-green", `Alle ${processedInRun} Dateien ausgewertet! Letztes Paket: ${sampleSpecies}`);
+              showToast(`✅ Alle ${processedInRun} Dateien ausgewertet!`);
+              break;
+            }
+            if (runLimit > 0 && processedInRun >= runLimit) {
+              updateTachoUI(
+                "Limit erreicht ✅",
+                "pill-green",
+                `Durchlauf-Limit (${processedInRun} Dateien) fertig! Letztes Paket: ${sampleSpecies} · Rest: ${remaining} offen.`
+              );
+              showToast(`✅ ${processedInRun} Dateien ausgewertet · ${remaining} noch offen`);
               break;
             }
 
@@ -4424,9 +4567,13 @@
 
             // RPM-Schutzpause zwischen Paketen mit Live-Countdown
             __aiWorkerState = "COOLDOWN";
+            const remainingInRun = runLimit > 0 ? Math.max(0, runLimit - processedInRun) : remaining;
+            const paceLabel = runLimit > 0
+              ? `Erkannt: ${sampleSpecies} · Nächstes Paket (${remainingInRun} im Durchlauf / ${remaining} offen) in`
+              : `Erkannt: ${sampleSpecies} · Nächstes Paket (${remaining} offen) in`;
             const okToContinue = await runCountdownSeconds(
               paceSec,
-              `Erkannt: ${sampleSpecies} · Nächstes Paket (${remaining} offen) in`
+              paceLabel
             );
             if (!okToContinue) break;
             __aiWorkerState = "RUNNING";
@@ -4515,7 +4662,9 @@
         const wasPausing = (__aiWorkerState === "PAUSING");
         __aiWorkerState = "IDLE";
         __aiAbortController = null;
-        await releaseScreenWakeLock();
+        if (!__isImporting) {
+          await releaseScreenWakeLock();
+        }
         await syncVisitsFromQueue(false);
         await renderQueueOverview();
         await renderPruefenVisits();
@@ -4586,21 +4735,43 @@
       }
 
       updateTachoUI();
+      const btnAiStart = document.getElementById("btn-ai-start");
+      if (btnAiStart) {
+        const lim = getAiRunLimitPref();
+        btnAiStart.textContent = (lim > 0 && pending.length > lim)
+          ? `▶️ KI-Auswertung starten (${lim} von ${pending.length})`
+          : (pending.length > 0 ? `▶️ KI-Auswertung starten (${pending.length} offen)` : "▶️ KI-Auswertung starten");
+      }
 
       const listEl = document.getElementById("queue-batches-list");
       const footEl = document.getElementById("queue-footer-actions");
+      const clearBtn = document.getElementById("btn-clear-pending-queue");
       if (!listEl) return;
 
-      if (items.length === 0) {
-        if (footEl) footEl.style.display = "none";
-        listEl.innerHTML = `<div class="tile-sub" style="color:#e6f2d0; text-align:center; padding:8px 0;">Noch keine SD-Stapel in der Warteschlange. Oben Kamera &amp; Standort wählen und Dateien laden.</div>`;
+      if (pending.length === 0) {
+        if (done.length > 0) {
+          if (footEl) footEl.style.display = "flex";
+          if (clearBtn) clearBtn.style.display = "none";
+          listEl.innerHTML = `<div class="tile-sub" style="color:#d8fbe2; text-align:center; padding:8px 4px; font-weight:700;">✅ Keine offenen Dateien mehr! Alle ${done.length} ausgewerteten Aufnahmen warten im Tab <strong>🚦 Prüfen</strong>.</div>`;
+        } else {
+          if (footEl) footEl.style.display = "none";
+          listEl.innerHTML = `<div class="tile-sub" style="color:#e6f2d0; text-align:center; padding:8px 0;">Noch keine offenen SD-Stapel in der Warteschlange. Oben Kamera &amp; Standort wählen und Dateien laden.</div>`;
+        }
         return;
       }
 
       if (footEl) footEl.style.display = "flex";
+      if (clearBtn) clearBtn.style.display = "inline-flex";
+
+      // Nur Stapel mit echten offenen (PENDING) Dateien anzeigen; fertige Dateien fallen automatisch raus
+      const doneCountByBatch = new Map();
+      done.forEach(d => {
+        const bid = d.batchId || "legacy";
+        doneCountByBatch.set(bid, (doneCountByBatch.get(bid) || 0) + 1);
+      });
 
       const batchMap = new Map();
-      items.forEach(item => {
+      pending.forEach(item => {
         const bid = item.batchId || "legacy";
         if (!batchMap.has(bid)) batchMap.set(bid, []);
         batchMap.get(bid).push(item);
@@ -4610,9 +4781,9 @@
         arr.sort((a, b) => (a.effectiveTs || 0) - (b.effectiveTs || 0));
         const first = arr[0];
         const last = arr[arr.length - 1];
-        const warns = arr.filter(x => x.status === "PENDING" && x.timeSuspect).length;
-        const doneCnt = arr.filter(x => x.status === "DONE").length;
-        const pendCnt = arr.filter(x => x.status === "PENDING").length;
+        const warns = arr.filter(x => x.timeSuspect).length;
+        const doneCnt = doneCountByBatch.get(batchId) || 0;
+        const pendCnt = arr.length;
         const shifted = arr.some(x => Number(x.timeOffsetMs || 0) !== 0);
         const created = Math.max(...arr.map(x => x.createdAt || 0));
         return { batchId, arr, first, last, warns, doneCnt, pendCnt, shifted, created };
@@ -4624,28 +4795,27 @@
         const rangeStr = b.arr.length === 1
           ? formatTimestampDE(b.first.effectiveTs)
           : `${formatTimestampShortDE(b.first.effectiveTs)} → ${formatTimestampShortDE(b.last.effectiveTs)}`;
-        const allDone = b.pendCnt === 0;
 
         return `
-          <div class="batch-card ${b.warns > 0 ? "has-warn" : (allDone ? "is-done" : "")}">
+          <div class="batch-card ${b.warns > 0 ? "has-warn" : ""}">
             <div class="batch-head">
               <div>
                 <div class="batch-title">📍 ${escapeHTML(b.first.spotName)}</div>
                 <div style="font-size:0.72rem; color:#bfe3ca; margin-top:2px;">📷 ${escapeHTML(b.first.cameraName)}</div>
               </div>
-              <span class="pill ${allDone ? "pill-blue" : (b.warns > 0 ? "pill-yellow" : "pill-green")}">
-                ${allDone ? `✅ ${b.doneCnt}/${b.arr.length}` : `${b.doneCnt}/${b.arr.length} fertig`}
+              <span class="pill ${b.warns > 0 ? "pill-yellow" : "pill-green"}">
+                ${b.pendCnt} offen${b.doneCnt > 0 ? ` · ${b.doneCnt} fertig` : ""}
               </span>
             </div>
             <div class="batch-meta">
               🖼️ ${imgs} Fotos · 🎬 ${vids} Videos${b.shifted ? " · ⏱️ Zeit korrigiert" : ""}<br>
-              🕒 Zeitraum: <strong style="color:#eef7f1;">${escapeHTML(rangeStr)}</strong>
+              🕒 Zeitraum (offen): <strong style="color:#eef7f1;">${escapeHTML(rangeStr)}</strong>
               ${b.warns > 0 ? `<br><span style="color:var(--accent-yellow); font-weight:800;">⚠️ ${b.warns}× Zeit unplausibel – bitte Batteriewechsel-Retter nutzen!</span>` : ""}
             </div>
             <div class="batch-actions">
               <button type="button" class="btn-sm ${b.warns > 0 ? "btn-warn" : "btn-no"}" style="flex:1;" onclick="openTimeFixModal('${escapeHTML(b.batchId)}')">⏱️ Zeit korrigieren</button>
               <button type="button" class="btn-sm btn-no" onclick="openBatchViewerModal('${escapeHTML(b.batchId)}')">👁️ Ansehen</button>
-              <button type="button" class="btn-sm btn-danger" onclick="deleteBatch('${escapeHTML(b.batchId)}')" title="Stapel löschen">🗑️</button>
+              <button type="button" class="btn-sm btn-danger" onclick="deleteBatch('${escapeHTML(b.batchId)}')" title="Offene Dateien dieses Stapels löschen">🗑️</button>
             </div>
           </div>
         `;
@@ -5060,7 +5230,7 @@
 
     // Verschmilzt benachbarte/überlappende Besuche (gleicher Standort + Wildart <= Lückenregel)
     async function mergeNearbyVisits(options = {}) {
-      const { onlyConfirmed = false, targetVisitId = null, silent = false } = options;
+      const { onlyConfirmed = false, onlyCategory = null, targetVisitId = null, silent = false } = options;
       const gapMs = getVisitGapMinutes() * 60000;
       const allVisits = await idbGetAll("visits").catch(() => []);
       const allQueue = await idbGetAll("queue").catch(() => []);
@@ -5070,6 +5240,7 @@
         if (v.reviewState === "SENT" || v.reviewState === "TRASHED" || v.ampel === "TRASH") return false;
         if (v.category === "LEERBILD") return false;
         if (onlyConfirmed && v.reviewState !== "CONFIRMED") return false;
+        if (onlyCategory && v.category !== onlyCategory) return false;
         return true;
       });
 
@@ -5097,14 +5268,18 @@
           if (targetVisitId && !grp.some(x => x.id === targetVisitId)) return;
 
           const combined = combineVisitsGroup(grp, queueById);
+          // Verschmolzenen Besuch gegen versehentliches Zerreißen beim nächsten Tab-Wechsel schützen
+          combined.manualEdited = true;
           // Wenn manuell ein einzelner Besuch korrigiert wurde, bleibt das verschmolzene Ergebnis bestätigt
           if (targetVisitId) {
             combined.reviewState = "CONFIRMED";
             combined.ampel = "GREEN";
             combined.yellowReasons = [];
-            combined.manualEdited = true;
           }
           await idbPut("visits", combined);
+          if (combined.reviewState === "CONFIRMED") {
+            await cleanupAiBlobsForVisits(combined);
+          }
           for (const oldV of grp) {
             if (oldV.id !== combined.id) {
               removeInboxEntryByVisitIdSilent(oldV.id);
@@ -5145,7 +5320,11 @@
       if (!confirm(`Alle zeitlich zusammenhängenden ${label} (gleicher Standort, gleiche Wildart, max. ${gapMin} Min. Abstand) nach dem Klassen-Maximum zusammenführen? (Bereits übergebene Besuche bleiben unangetastet.)`)) {
         return;
       }
-      const res = await mergeNearbyVisits({ onlyConfirmed, silent: false });
+      const res = await mergeNearbyVisits({
+        onlyConfirmed,
+        onlyCategory: onlyConfirmed ? "SCHWARZWILD" : null,
+        silent: false
+      });
       if (res.removedVisitsCount > 0) {
         showToast(`🔗 ${res.removedVisitsCount + res.mergedGroupsCount} Einträge zu ${res.mergedGroupsCount} sauberen Besuch(en) verschmolzen`);
       } else {
@@ -5232,6 +5411,9 @@
               combined.yellowReasons = [];
             }
             await idbPut("visits", combined);
+            if (combined.reviewState === "CONFIRMED") {
+              await cleanupAiBlobsForVisits(combined);
+            }
             const idx = activeVisits.indexOf(matchConfirmed);
             if (idx >= 0) activeVisits[idx] = combined;
           } else {
@@ -5284,6 +5466,9 @@
             host.bridgedEmptyCount = (Number(host.bridgedEmptyCount) || 0) + 1;
             host.updatedAt = Date.now();
             await idbPut("visits", host);
+            if (host.reviewState === "CONFIRMED") {
+              await cleanupAiBlobsForVisits({ itemIds: [em.id] });
+            }
           }
         } else {
           remainingEmpty.push(em);
@@ -5401,9 +5586,10 @@
           ctxBar.style.display = "flex";
           ctxBar.innerHTML = `<button type="button" class="btn-sm btn-danger" style="flex:1; padding:9px;" onclick="emptyTrashPermanently()">🧹 Papierkorb endgültig leeren (${trashList.length} entfernen)</button>`;
         } else if (__pruefenFilter === "CONFIRMED" && confirmedList.length > 0) {
-          const swReady = confirmedList.filter(v => v.category === "SCHWARZWILD").length;
+          const swReady = confirmedList.filter(v => v.reviewState === "CONFIRMED" && v.category === "SCHWARZWILD").length;
+          const bfReady = confirmedList.filter(v => v.reviewState === "CONFIRMED" && isBycatchTransferVisit(v)).length;
           ctxBar.style.display = "flex";
-          ctxBar.innerHTML = `<button type="button" class="btn-sm btn-no" style="flex:1; padding:9px;" onclick="switchTab('uebergabe')">📤 Zur Übergabe (${swReady} Schwarzwild-Besuche bereit)</button>`;
+          ctxBar.innerHTML = `<button type="button" class="btn-sm btn-no" style="flex:1; padding:9px;" onclick="switchTab('uebergabe')">📤 Zur Übergabe (${swReady} SW · ${bfReady} Beifang bereit)</button>`;
         } else {
           ctxBar.style.display = "none";
           ctxBar.innerHTML = "";
@@ -5521,6 +5707,33 @@
       }).join("");
     }
 
+    // Räumt große 1024-px-Arbeitsbilder nach dem Bestätigen/Verwerfen still im Hintergrund auf (320-px-Vorschau & Dubletten-Schutz bleiben erhalten)
+    async function cleanupAiBlobsForVisits(visitsInput) {
+      const list = Array.isArray(visitsInput) ? visitsInput : (visitsInput ? [visitsInput] : []);
+      const itemIds = new Set();
+      list.forEach(v => {
+        (v?.itemIds || []).forEach(id => { if (id) itemIds.add(id); });
+      });
+      if (itemIds.size === 0) return 0;
+
+      let cleaned = 0;
+      const fps = [];
+      for (const qid of itemIds) {
+        const qItem = await idbGet("queue", qid).catch(() => null);
+        if (!qItem) continue;
+        if (qItem.fingerprint) fps.push(qItem.fingerprint);
+        if (Array.isArray(qItem.aiBlobs) && qItem.aiBlobs.length > 0) {
+          qItem.aiBlobs = [];
+          await idbPut("queue", qItem);
+          cleaned++;
+        }
+      }
+      if (fps.length > 0) {
+        await recordSeenFingerprints(fps);
+      }
+      return cleaned;
+    }
+
     async function confirmVisit(visitId) {
       const v = await idbGet("visits", visitId).catch(() => null);
       if (!v) return;
@@ -5533,6 +5746,7 @@
       v.yellowReasons = [];
       v.updatedAt = Date.now();
       await idbPut("visits", v);
+      await cleanupAiBlobsForVisits(v);
       await renderPruefenVisits();
       await renderUebergabeView();
       await refreshDiagnostics();
@@ -5557,6 +5771,7 @@
         v.updatedAt = Date.now();
         await idbPut("visits", v);
       }
+      await cleanupAiBlobsForVisits(greens);
       await renderPruefenVisits();
       await renderUebergabeView();
       await refreshDiagnostics();
@@ -5572,6 +5787,7 @@
       v.manualEdited = true;
       v.updatedAt = Date.now();
       await idbPut("visits", v);
+      await cleanupAiBlobsForVisits(v);
       await renderPruefenVisits();
       await renderUebergabeView();
       await refreshDiagnostics();
@@ -5619,8 +5835,8 @@
         const list = Array.isArray(rec?.value) ? rec.value : [];
         const set = new Set(list);
         fps.forEach(fp => { if (fp) set.add(fp); });
-        // Auf die letzten 6000 Fingerabdrücke begrenzen (~140 KB)
-        const trimmed = Array.from(set).slice(-6000);
+        // Auf die letzten 12000 Fingerabdrücke begrenzen (~280 KB in IndexedDB)
+        const trimmed = Array.from(set).slice(-12000);
         await idbPut("meta", { key: "seen_fingerprints", value: trimmed, updatedAt: Date.now() });
       } catch (e) {}
     }
@@ -5692,7 +5908,8 @@
       for (const qid of (v.itemIds || [])) {
         const qItem = await idbGet("queue", qid).catch(() => null);
         if (!qItem) continue;
-        const blobs = (Array.isArray(qItem.aiBlobs) && qItem.aiBlobs.length > 0)
+        const hasHighRes = Array.isArray(qItem.aiBlobs) && qItem.aiBlobs.length > 0;
+        const blobs = hasHighRes
           ? qItem.aiBlobs
           : (qItem.thumbBlob ? [qItem.thumbBlob] : []);
 
@@ -5706,7 +5923,9 @@
             ts: qItem.effectiveTs,
             timeSource: qItem.timeSource,
             ocrTempC: qItem.aiResult?.ocrTempC || "",
-            frameLabel: blobs.length > 1 ? `Video-Frame ${fIdx + 1}/${blobs.length}` : "Foto (1024 px)"
+            frameLabel: !hasHighRes
+              ? "Vorschau (320 px · Arbeitsbild aufgeräumt)"
+              : (blobs.length > 1 ? `Video-Frame ${fIdx + 1}/${blobs.length}` : "Foto (1024 px)")
           });
         });
       }
@@ -6000,6 +6219,8 @@
         const mRes = await mergeNearbyVisits({ onlyConfirmed: false, targetVisitId: v.id, silent: true });
         mergedAfterEdit = mRes.removedVisitsCount;
       }
+      const updatedAfterMerge = await idbGet("visits", v.id).catch(() => null);
+      await cleanupAiBlobsForVisits(updatedAfterMerge || v);
       closeEditVisitModal();
       await renderPruefenVisits();
       await renderUebergabeView();
@@ -6024,18 +6245,16 @@
         showToast("⏹️ Bitte zuerst die laufende KI-Auswertung stoppen");
         return;
       }
-      const arr = await idbGetAllByIndex("queue", "batchId", batchId).catch(() => []);
+      const arr = (await idbGetAllByIndex("queue", "batchId", batchId).catch(() => []))
+        .filter(x => x.status === "PENDING");
       if (arr.length === 0) return;
-      if (!confirm(`Diesen Stapel mit ${arr.length} Datei(en) wirklich aus der Warteschlange löschen? (Bereits bestätigte Besuche bleiben erhalten.)`)) return;
+      if (!confirm(`${arr.length} offene Datei(en) dieses Stapels aus der Warteschlange entfernen? (Bereits ausgewertete Ergebnisse im Tab „Prüfen“ bleiben vollständig erhalten.)`)) return;
       for (const item of arr) {
         await idbDelete("queue", item.id);
       }
       await renderQueueOverview();
-      await syncVisitsFromQueue(false);
-      await renderPruefenVisits();
-      await renderUebergabeView();
       await refreshDiagnostics();
-      showToast(`🗑️ Stapel (${arr.length} Dateien) entfernt`);
+      showToast(`🗑️ ${arr.length} offene Datei(en) entfernt`);
     }
 
     async function clearEntireQueue() {
@@ -6043,16 +6262,19 @@
         showToast("⏹️ Bitte zuerst die laufende KI-Auswertung stoppen");
         return;
       }
-      const items = await idbGetAll("queue").catch(() => []);
-      if (items.length === 0) return;
-      if (!confirm(`Alle ${items.length} Dateien aus der Warteschlange entfernen? Bereits bestätigte/übergebene Besuche bleiben geschützt; nur noch offene, unbestätigte Einträge verschwinden.`)) return;
-      await idbClear("queue");
-      await syncVisitsFromQueue(false);
+      const pendingItems = (await idbGetAll("queue").catch(() => []))
+        .filter(x => x.status === "PENDING");
+      if (pendingItems.length === 0) {
+        showToast("ℹ️ Keine offenen Dateien in der Warteschlange");
+        return;
+      }
+      if (!confirm(`Alle ${pendingItems.length} noch offenen Dateien aus der Warteschlange entfernen? (Bereits ausgewertete Ergebnisse im Tab „Prüfen“ bleiben geschützt.)`)) return;
+      for (const item of pendingItems) {
+        await idbDelete("queue", item.id);
+      }
       await renderQueueOverview();
-      await renderPruefenVisits();
-      await renderUebergabeView();
       await refreshDiagnostics();
-      showToast("🗑️ Warteschlange geleert (bestätigte Besuche geschützt)");
+      showToast(`🗑️ ${pendingItems.length} offene Dateien aus Warteschlange geleert`);
     }
 
     // =========================================================================
@@ -6192,8 +6414,16 @@
 
     async function writeBatchOffset(newOffsetMs, additive = false) {
       if (!__tfBatchId || __tfItems.length === 0) return;
+      const refId = document.getElementById("tf-ref-select")?.value;
+      const refItem = __tfItems.find(x => x.id === refId) || __tfItems[0];
+      const skipOcrItems = (!additive && newOffsetMs !== 0 && refItem && refItem.timeSource === "FILE_MTIME");
       const updatedMap = new Map();
+      let skippedOcrCount = 0;
       for (const item of __tfItems) {
+        if (skipOcrItems && item.timeSource === "INFOBAR_OCR") {
+          skippedOcrCount++;
+          continue;
+        }
         const offsetMs = additive ? ((item.timeOffsetMs || 0) + newOffsetMs) : newOffsetMs;
         item.timeOffsetMs = offsetMs;
         item.effectiveTs = item.rawTs + offsetMs;
@@ -6230,7 +6460,9 @@
       await renderQueueOverview();
       await renderPruefenVisits();
       await renderUebergabeView();
-      showToast(`⏱️ Zeit für ${__tfItems.length} Datei(en) aktualisiert`);
+      showToast(skippedOcrCount > 0
+        ? `⏱️ Zeit für ${updatedMap.size} Datei(en) aktualisiert (${skippedOcrCount}× Infobalken-OCR geschützt)`
+        : `⏱️ Zeit für ${updatedMap.size} Datei(en) aktualisiert`);
     }
 
     async function applyQuickShiftMinutes(mins) {
@@ -6267,15 +6499,16 @@
     async function openBatchViewerModal(batchId) {
       __bvBatchId = batchId;
       __bvItems = (await idbGetAllByIndex("queue", "batchId", batchId).catch(() => []))
+        .filter(x => x.status === "PENDING")
         .sort((a, b) => (a.effectiveTs || 0) - (b.effectiveTs || 0));
       __bvPage = 0;
       if (__bvItems.length === 0) {
-        showToast("Keine Dateien mehr in diesem Stapel");
+        showToast("Keine offenen Dateien mehr in diesem Stapel");
         return;
       }
       const first = __bvItems[0];
       document.getElementById("bv-title").textContent = `📂 ${first.spotName}`;
-      document.getElementById("bv-sub").textContent = `📷 ${first.cameraName} · ${__bvItems.length} Dateien`;
+      document.getElementById("bv-sub").textContent = `📷 ${first.cameraName} · ${__bvItems.length} offene Dateien`;
       renderBatchViewerPage();
       document.getElementById("batch-viewer-modal").classList.add("open");
     }
@@ -6341,17 +6574,14 @@
       await idbDelete("queue", itemId);
       __bvItems = __bvItems.filter(x => x.id !== itemId);
       await renderQueueOverview();
-      await syncVisitsFromQueue(false);
-      await renderPruefenVisits();
-      await renderUebergabeView();
       await refreshDiagnostics();
       if (__bvItems.length === 0) {
         closeBatchViewerModal();
-        showToast("🗑️ Letzte Datei aus Stapel entfernt");
+        showToast("🗑️ Letzte offene Datei aus Stapel entfernt");
       } else {
-        document.getElementById("bv-sub").textContent = `📷 ${__bvItems[0].cameraName} · ${__bvItems.length} Dateien`;
+        document.getElementById("bv-sub").textContent = `📷 ${__bvItems[0].cameraName} · ${__bvItems.length} offene Dateien`;
         renderBatchViewerPage();
-        showToast("🗑️ Datei entfernt");
+        showToast("🗑️ Offene Datei entfernt");
       }
     }
 
@@ -6468,6 +6698,11 @@
     // 11B. DURCHREICHE (sm_cam_inbox_v1), REVIERBERICHT & BACKUP (ETAPPE 5)
     // =========================================================================
     const SM_CAM_INBOX_KEY = "sm_cam_inbox_v1";
+    const BEIFANG_TRANSFER_CATEGORIES = new Set(["REHWILD", "DAMWILD", "RAUBWILD", "WOLF", "STOERUNG"]);
+
+    function isBycatchTransferVisit(v) {
+      return Boolean(v && BEIFANG_TRANSFER_CATEGORIES.has(v.category));
+    }
 
     function readCamInbox() {
       const arr = safeGetJSON(SM_CAM_INBOX_KEY, []);
@@ -6497,7 +6732,6 @@
     function findPossibleSauenmatrixDuplicate(visit, targetKanzel) {
       const smLogs = safeGetJSON("sm_logs_v1", []);
       if (!Array.isArray(smLogs) || smLogs.length === 0 || !targetKanzel) return false;
-      const vDate = formatIsoDateLocal(visit.startTs);
       const targetNorm = targetKanzel.trim().toLowerCase();
 
       return smLogs.some(log => {
@@ -6513,22 +6747,27 @@
     }
 
     function buildInboxEntryFromVisit(v, statusVal = "GREEN") {
-      const b = Object.assign(emptyBoarBreakdown(), v.boarBreakdown || {});
+      const cat = v.category || "SCHWARZWILD";
+      const isSw = cat === "SCHWARZWILD";
+      const b = isSw ? Object.assign(emptyBoarBreakdown(), v.boarBreakdown || {}) : emptyBoarBreakdown();
       const targetKanzel = (v.mappedKanzel || v.spotName || "Unbekannt").trim();
       const files = Array.isArray(v.fileNames) ? v.fileNames : [];
+      const spDetail = (v.speciesDetail || getCategoryLabelDE(cat).replace(/^[^\s]+\s/, "")).trim();
       const noteParts = [];
       if (v.cameraName && v.cameraName !== "Ohne Profil") noteParts.push(`Kamera: ${v.cameraName}`);
       if (v.spotName && v.spotName !== targetKanzel) noteParts.push(`Platz: ${v.spotName}`);
-      if (v.rottenTag) noteParts.push(`Rotte: ${v.rottenTag}`);
+      if (isSw && v.rottenTag) noteParts.push(`Rotte: ${v.rottenTag}`);
       if (v.notes) noteParts.push(v.notes);
 
       return {
         inboxId: `ul_${v.id}`,
         visitId: v.id,
         source: "UEBERLAEUFER",
-        sourceVersion: "0.5.3",
+        sourceVersion: "0.5.4",
         createdAt: Date.now(),
-        status: statusVal || "GREEN",
+        status: isSw ? (statusVal || "GREEN") : (statusVal || "BEIFANG"),
+        category: cat,
+        speciesDetail: spDetail,
         date: formatIsoDateLocal(v.startTs),
         arrival: formatTimeHHMM(v.startTs),
         departure: formatTimeHHMM(v.endTs || v.startTs),
@@ -6544,8 +6783,8 @@
         GROSS: Number(b.grossUnklar) || 0,
         KLEIN: Number(b.kleinUnklar) || 0,
         UNBEKANNT: Number(b.unbekannt) || 0,
-        totalCount: Number(v.maxCount) || sumBoarBreakdown(b),
-        rottenTag: v.rottenTag || "",
+        totalCount: isSw ? (Number(v.maxCount) || sumBoarBreakdown(b)) : Math.max(0, Number(v.maxCount) || 0),
+        rottenTag: isSw ? (v.rottenTag || "") : "",
         ocrTempC: v.ocrTempC || "",
         fileNames: files.slice(0, 8),
         fileCount: files.length,
@@ -6560,18 +6799,19 @@
       const smSpots = readSauenmatrixKanzeln();
 
       const readySw = visits.filter(v => v.reviewState === "CONFIRMED" && v.category === "SCHWARZWILD");
-      const sentSw = visits.filter(v => v.reviewState === "SENT");
-      const confirmedOther = visits.filter(v => (v.reviewState === "CONFIRMED" || v.reviewState === "SENT") && v.category !== "SCHWARZWILD");
+      const readyBycatch = visits.filter(v => v.reviewState === "CONFIRMED" && isBycatchTransferVisit(v));
+      const sentAll = visits.filter(v => v.reviewState === "SENT");
       const allConfirmed = visits.filter(v => v.reviewState === "CONFIRMED" || v.reviewState === "SENT");
 
       // Zähler & Badges aktualisieren
       const setTxt = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = String(t); };
       setTxt("ueb-ready-pill", `${readySw.length} bereit`);
+      setTxt("ueb-bycatch-ready-pill", `${readyBycatch.length} bereit`);
       setTxt("ueb-confirmed-sw-val", readySw.length);
       setTxt("ueb-inbox-count-val", inbox.length);
-      setTxt("ueb-confirmed-other-val", confirmedOther.length);
+      setTxt("ueb-confirmed-other-val", readyBycatch.length);
       setTxt("inbox-count-pill", `${inbox.length} wartend`);
-      setTxt("ueb-sent-hist-pill", `${sentSw.length}`);
+      setTxt("ueb-sent-hist-pill", `${sentAll.length}`);
       setTxt("ueb-all-confirmed-pill", `${allConfirmed.length} gesamt`);
 
       const navUeb = document.getElementById("nav-badge-uebergabe");
@@ -6648,6 +6888,61 @@
         }
       }
 
+      // 1B. Liste bereiter Beifang-Besuche (getrennt von Schwarzwild)
+      const bycatchListEl = document.getElementById("ueb-bycatch-ready-list");
+      const bycatchSendBar = document.getElementById("ueb-bycatch-send-bar");
+      if (bycatchListEl) {
+        if (readyBycatch.length === 0) {
+          if (bycatchSendBar) bycatchSendBar.style.display = "none";
+          bycatchListEl.innerHTML = `<div class="tile-sub" style="text-align:center; padding:8px 6px;">Aktuell keine neuen bestätigten Beifänge (Rehwild, Damwild, Raubwild, Wolf, Störung) zur Übergabe offen.</div>`;
+        } else {
+          if (bycatchSendBar) bycatchSendBar.style.display = "flex";
+          bycatchListEl.innerHTML = readyBycatch.map(v => {
+            const targetKanzel = v.mappedKanzel || "";
+            const effectiveTarget = targetKanzel || v.spotName || "Unbekannt";
+            const needsTargetMap = !targetKanzel && smSpots.length > 0;
+            const timeRange = formatTimeHHMM(v.startTs) === formatTimeHHMM(v.endTs)
+              ? `${formatTimeHHMM(v.startTs)} Uhr`
+              : `${formatTimeHHMM(v.startTs)}–${formatTimeHHMM(v.endTs)} (${v.durationMin}m)`;
+            const pillCls = (v.category === "WOLF" || v.category === "STOERUNG") ? "pill-red" : "pill-yellow";
+
+            const mapSelectHtml = needsTargetMap ? `
+              <div style="margin-top:4px;">
+                <select class="app-select" style="padding:6px 8px; font-size:0.75rem; border-color:var(--accent-yellow);" onchange="assignVisitTargetKanzel('${escapeHTML(v.id)}', this.value)">
+                  <option value="">⚠️ Ziel-Kanzel für Sauenmatrix wählen (oder „${escapeHTML(v.spotName)}“ nutzen)</option>
+                  ${smSpots.map(s => `<option value="${escapeHTML(s.name)}">→ ${escapeHTML(s.name)} (${s.type === "FREIFLAECHE" ? "Freifläche" : "Kirrung"})</option>`).join("")}
+                </select>
+              </div>
+            ` : "";
+
+            return `
+              <div class="ueb-card ${needsTargetMap ? "warn-dup" : ""}" style="border-left-color:${v.category === "WOLF" || v.category === "STOERUNG" ? "var(--accent-red)" : "var(--accent-yellow)"};">
+                <div class="ueb-card-top">
+                  <input type="checkbox" class="ueb-check ueb-bycatch-check" data-visit-id="${escapeHTML(v.id)}" checked>
+                  <div style="flex:1; min-width:0; font-size:0.76rem; line-height:1.4;">
+                    <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+                      <strong style="color:#fff;">📍 ${escapeHTML(effectiveTarget)}</strong>
+                      <div style="display:flex; align-items:center; gap:5px;">
+                        <span class="pill ${pillCls}">${escapeHTML(getCategoryLabelDE(v.category))}${v.maxCount > 0 ? ` · ${v.maxCount}×` : ""}</span>
+                        <button type="button" class="btn-sm btn-no" style="padding:3px 7px; font-size:0.7rem;" onclick="openEditVisitModal('${escapeHTML(v.id)}')" title="Besuch korrigieren">✏️</button>
+                      </div>
+                    </div>
+                    <div style="color:#d4f3dd; font-weight:700;">
+                      📅 ${escapeHTML(formatDateDE(v.startTs))} · 🕒 ${escapeHTML(timeRange)}
+                    </div>
+                    <div style="color:#ffe899; font-weight:700; font-size:0.72rem;">
+                      ${escapeHTML(v.speciesDetail || getCategoryLabelDE(v.category))}${v.notes ? ` · ${escapeHTML(v.notes)}` : ""}
+                    </div>
+                    ${v.spotName && v.spotName !== effectiveTarget ? `<div style="color:var(--text-muted); font-size:0.69rem;">Kamera-Platz: ${escapeHTML(v.spotName)} (${escapeHTML(v.cameraName)})</div>` : ""}
+                    ${mapSelectHtml}
+                  </div>
+                </div>
+              </div>
+            `;
+          }).join("");
+        }
+      }
+
       // 2. Aktueller Posteingang (sm_cam_inbox_v1)
       const inboxListEl = document.getElementById("ueb-inbox-list");
       const inboxActEl = document.getElementById("ueb-inbox-actions");
@@ -6658,22 +6953,31 @@
         } else {
           if (inboxActEl) inboxActEl.style.display = "flex";
           inboxListEl.innerHTML = inbox.map(entry => {
+            const entryCat = entry.category || "SCHWARZWILD";
+            const isSw = entryCat === "SCHWARZWILD";
             const counts = [];
-            if (entry.K) counts.push(`K:${entry.K}`);
-            if (entry.B) counts.push(`B:${entry.B}`);
-            if (entry.UEB) counts.push(`ÜB:${entry.UEB}`);
-            if (entry.UEK) counts.push(`ÜK:${entry.UEK}`);
-            if (entry.F) counts.push(`F:${entry.F}`);
-            if (entry.GROSS) counts.push(`GROSS:${entry.GROSS}`);
-            if (entry.KLEIN) counts.push(`KLEIN:${entry.KLEIN}`);
-            if (entry.UNBEKANNT) counts.push(`UNBEK:${entry.UNBEKANNT}`);
+            if (isSw) {
+              if (entry.K) counts.push(`K:${entry.K}`);
+              if (entry.B) counts.push(`B:${entry.B}`);
+              if (entry.UEB) counts.push(`ÜB:${entry.UEB}`);
+              if (entry.UEK) counts.push(`ÜK:${entry.UEK}`);
+              if (entry.F) counts.push(`F:${entry.F}`);
+              if (entry.GROSS) counts.push(`GROSS:${entry.GROSS}`);
+              if (entry.KLEIN) counts.push(`KLEIN:${entry.KLEIN}`);
+              if (entry.UNBEKANNT) counts.push(`UNBEK:${entry.UNBEKANNT}`);
+            }
+            const headLabel = isSw ? `🐗 ${entry.kanzel}` : `${getCategoryLabelDE(entryCat)} · ${entry.kanzel}`;
+            const detailLine = isSw
+              ? (counts.join(" · ") || `${entry.totalCount || 0}×`)
+              : `${entry.speciesDetail || getCategoryLabelDE(entryCat)}${entry.totalCount ? ` · ${entry.totalCount}×` : ""}`;
+            const pillCls = isSw ? "pill-blue" : ((entryCat === "WOLF" || entryCat === "STOERUNG") ? "pill-red" : "pill-yellow");
             return `
-              <div class="ueb-card is-inbox">
+              <div class="ueb-card is-inbox" ${!isSw ? 'style="border-left-color:var(--accent-yellow);"' : ""}>
                 <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
                   <div style="font-size:0.76rem; line-height:1.4; min-width:0;">
-                    <strong style="color:#fff;">🐗 ${escapeHTML(entry.kanzel)}</strong> <span class="pill pill-blue" style="margin-left:4px;">${escapeHTML(entry.status || "GREEN")}</span><br>
+                    <strong style="color:#fff;">${escapeHTML(headLabel)}</strong> <span class="pill ${pillCls}" style="margin-left:4px;">${escapeHTML(entry.status || (isSw ? "GREEN" : "BEIFANG"))}</span><br>
                     <span style="color:#d4f3dd; font-weight:700;">${escapeHTML(entry.date)} · ${escapeHTML(entry.arrival)}–${escapeHTML(entry.departure)} (${entry.durationMin}m)</span><br>
-                    <span style="color:var(--accent-green); font-weight:800;">${escapeHTML(counts.join(" · ") || `${entry.totalCount || 0}×`)}</span>
+                    <span style="color:${isSw ? "var(--accent-green)" : "#ffe899"}; font-weight:800;">${escapeHTML(detailLine)}</span>
                     ${entry.note ? `<div style="color:var(--text-muted); font-size:0.7rem; margin-top:2px;">${escapeHTML(entry.note)}</div>` : ""}
                   </div>
                   <button type="button" class="btn-sm btn-danger" style="padding:4px 8px;" onclick="removeSingleInboxEntry('${escapeHTML(entry.inboxId)}')" title="Aus Posteingang entfernen">✕</button>
@@ -6687,18 +6991,21 @@
       // 3. Historie bereits übergebener Besuche
       const histEl = document.getElementById("ueb-sent-history-list");
       if (histEl) {
-        if (sentSw.length === 0) {
+        if (sentAll.length === 0) {
           histEl.innerHTML = `<div class="tile-sub" style="font-size:0.73rem;">Noch keine Besuche übergeben.</div>`;
         } else {
-          histEl.innerHTML = sentSw.slice(0, 25).map(v => `
+          histEl.innerHTML = sentAll.slice(0, 25).map(v => {
+            const catLbl = v.category === "SCHWARZWILD" ? "🐗" : getCategoryLabelDE(v.category);
+            return `
             <div class="spot-row" style="padding:7px 9px; margin-bottom:6px;">
               <div style="font-size:0.73rem; line-height:1.35;">
-                <strong>🐗 ${escapeHTML(v.sentKanzel || v.mappedKanzel || v.spotName)}</strong> (${v.maxCount || 0}×)<br>
-                <span style="color:var(--text-muted);">${escapeHTML(formatDateDE(v.startTs))} · ${escapeHTML(formatTimeHHMM(v.startTs))}–${escapeHTML(formatTimeHHMM(v.endTs))}</span>
+                <strong>${escapeHTML(catLbl)} ${escapeHTML(v.sentKanzel || v.mappedKanzel || v.spotName)}</strong> (${v.maxCount || 0}×)<br>
+                <span style="color:var(--text-muted);">${escapeHTML(formatDateDE(v.startTs))} · ${escapeHTML(formatTimeHHMM(v.startTs))}–${escapeHTML(formatTimeHHMM(v.endTs))}${v.category !== "SCHWARZWILD" && v.speciesDetail ? ` · ${escapeHTML(v.speciesDetail)}` : ""}</span>
               </div>
               <button type="button" class="btn-sm btn-no" style="padding:4px 8px; font-size:0.7rem;" onclick="resetSentVisitToConfirmed('${escapeHTML(v.id)}')">↺ Erneut</button>
             </div>
-          `).join("");
+          `;
+          }).join("");
         }
       }
 
@@ -6731,13 +7038,12 @@
       if (kanzelName) showToast(`📍 Ziel-Kanzel „${kanzelName}“ zugewiesen`);
     }
 
-    async function pushSelectedVisitsToInbox() {
-      const checks = Array.from(document.querySelectorAll(".ueb-visit-check:checked"));
+    async function pushCheckedVisitsToInbox(selector, statusVal, labelNoun) {
+      const checks = Array.from(document.querySelectorAll(selector));
       if (checks.length === 0) {
         showToast("Bitte mindestens einen Besuch anhaken");
         return;
       }
-      const statusVal = document.getElementById("ueb-default-status")?.value || "GREEN";
       const inbox = readCamInbox();
       let added = 0;
       let updated = 0;
@@ -6779,7 +7085,16 @@
       await renderPruefenVisits();
       await refreshDiagnostics();
       const totalMoved = added + updated;
-      showToast(updated > 0 && added === 0 ? `📤 ${updated} Eintrag/Einträge in Durchreiche aktualisiert` : `📤 ${totalMoved} Schwarzwild-Besuch(e) in Durchreiche gelegt`);
+      showToast(updated > 0 && added === 0 ? `📤 ${updated} Eintrag/Einträge in Durchreiche aktualisiert` : `📤 ${totalMoved} ${labelNoun} in Durchreiche gelegt`);
+    }
+
+    async function pushSelectedVisitsToInbox() {
+      const statusVal = document.getElementById("ueb-default-status")?.value || "GREEN";
+      await pushCheckedVisitsToInbox(".ueb-visit-check:checked", statusVal, "Schwarzwild-Besuch(e)");
+    }
+
+    async function pushSelectedBycatchToInbox() {
+      await pushCheckedVisitsToInbox(".ueb-bycatch-check:checked", "BEIFANG", "Beifang-Besuch(e)");
     }
 
     async function removeSingleInboxEntry(inboxId) {
@@ -6902,12 +7217,13 @@
 
       const payload = {
         app: "Ueberlaeufer",
-        version: "0.5.3",
+        version: "0.5.4",
         exportedAt: new Date().toISOString(),
         preferences: {
           packSize: getPackSizePref(),
           paceSec: getPaceSecPref(),
-          visitGapMin: getVisitGapMinutes()
+          visitGapMin: getVisitGapMinutes(),
+          runLimit: getAiRunLimitPref()
         },
         cameras,
         spots,
@@ -6969,6 +7285,7 @@
           if (data.preferences.packSize) safeSetItem("ul_pack_size_v1", String(data.preferences.packSize));
           if (data.preferences.paceSec) safeSetItem("ul_pace_sec_v1", String(data.preferences.paceSec));
           if (data.preferences.visitGapMin) safeSetItem(VISIT_GAP_STORAGE, String(data.preferences.visitGapMin));
+          if (data.preferences.runLimit !== undefined) safeSetItem("ul_run_limit_v1", String(data.preferences.runLimit));
           loadAiPreferencesUI();
           syncVisitGapSelectors();
         }
@@ -7002,7 +7319,7 @@
       const visits = await idbGetAll("visits").catch(() => []);
       const finishedItemIds = new Set();
       visits.forEach(v => {
-        if (v.reviewState === "CONFIRMED" || v.reviewState === "SENT") {
+        if (v.reviewState === "CONFIRMED" || v.reviewState === "SENT" || (v.reviewState === "TRASHED" && v.manualEdited)) {
           (v.itemIds || []).forEach(id => finishedItemIds.add(id));
         }
       });
@@ -7018,14 +7335,20 @@
 
       let freedBytes = 0;
       let cleanedItems = 0;
+      const cleanedFps = [];
 
       for (const qid of finishedItemIds) {
         const qItem = await idbGet("queue", qid).catch(() => null);
-        if (!qItem || !Array.isArray(qItem.aiBlobs) || qItem.aiBlobs.length === 0) continue;
+        if (!qItem) continue;
+        if (qItem.fingerprint) cleanedFps.push(qItem.fingerprint);
+        if (!Array.isArray(qItem.aiBlobs) || qItem.aiBlobs.length === 0) continue;
         qItem.aiBlobs.forEach(b => { if (b && b.size) freedBytes += b.size; });
         qItem.aiBlobs = [];
         await idbPut("queue", qItem);
         cleanedItems++;
+      }
+      if (cleanedFps.length > 0) {
+        await recordSeenFingerprints(cleanedFps);
       }
 
       await refreshDiagnostics();
@@ -7085,7 +7408,7 @@
 
       const allVisits = await idbGetAll("visits").catch(() => []);
       const confSw = allVisits.filter(v => v.reviewState === "CONFIRMED" && v.category === "SCHWARZWILD").length;
-      const confOther = allVisits.filter(v => (v.reviewState === "CONFIRMED" || v.reviewState === "SENT") && v.category !== "SCHWARZWILD").length;
+      const confOther = allVisits.filter(v => v.reviewState === "CONFIRMED" && isBycatchTransferVisit(v)).length;
       const uebSwEl = document.getElementById("ueb-confirmed-sw-val");
       const uebOtEl = document.getElementById("ueb-confirmed-other-val");
       if (uebSwEl) uebSwEl.textContent = `${confSw}`;
@@ -7712,6 +8035,15 @@
         const savedLogo = await idbGet("meta", "customLogo");
         if (savedLogo && savedLogo.value) {
           applyLogoEverywhere(savedLogo.value);
+        }
+      } catch (e) {}
+
+      try {
+        const existingDoneFps = (await idbGetAll("queue").catch(() => []))
+          .filter(x => x.status === "DONE" && x.fingerprint)
+          .map(x => x.fingerprint);
+        if (existingDoneFps.length > 0) {
+          await recordSeenFingerprints(existingDoneFps);
         }
       } catch (e) {}
 

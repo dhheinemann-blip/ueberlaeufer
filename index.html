@@ -11,7 +11,7 @@
   <link id="dynamic-favicon" rel="icon" type="image/png" href="./icon-512.png">
   <link id="dynamic-touch-icon" rel="apple-touch-icon" href="./icon-512.png">
   <link id="app-manifest" rel="manifest" href="./manifest.json">
-  <title>Überläufer v0.6.0 – KI-Auswerter (24h Jagd- &amp; Wildauswertung)</title>
+  <title>Überläufer v0.6.1 – KI-Auswerter (24h Jagd- &amp; Wildauswertung)</title>
   <style>
     :root {
       --bg-main: #0b130e;
@@ -1529,7 +1529,7 @@
 
     <div id="home-logo-wrap" onclick="switchTab('import')" title="Zum SD-Stapel-Import"></div>
     <div class="home-brand-title">Überläufer</div>
-    <div class="home-brand-sub">24h Jagd- &amp; Wildauswertung · v0.6.0</div>
+    <div class="home-brand-sub">24h Jagd- &amp; Wildauswertung · v0.6.1</div>
 
     <div class="home-status-pill" onclick="switchTab('kameras')" id="home-status-pill">
       <span class="status-dot" id="home-sm-dot"></span>
@@ -1547,7 +1547,7 @@
   <header class="app-header">
     <div class="header-left">
       <div class="header-top-row">
-        <span class="header-title-pill">🐗 Überläufer <span style="font-size:0.68rem; color:var(--accent-green);">v0.6.0</span></span>
+        <span class="header-title-pill">🐗 Überläufer <span style="font-size:0.68rem; color:var(--accent-green);">v0.6.1</span></span>
         <button type="button" class="icon-pill-btn" id="btn-night-dim" onclick="toggleNightDim()" title="Nacht-Dimmung">🌙</button>
         <span class="status-badge" id="header-db-badge">
           <span class="status-dot" id="header-db-dot"></span>
@@ -1658,7 +1658,10 @@
             <div class="stat-box-val" id="q-stat-packs">0</div>
           </div>
           <div class="stat-box">
-            <div class="stat-box-label">Bereits fertig</div>
+            <div class="stat-box-label" style="display:flex; justify-content:space-between; align-items:center; gap:4px;">
+              <span>Bereits fertig</span>
+              <button type="button" onclick="resetDoneCounterBaseline()" title="Zähler auf 0 zurücksetzen (Daten bleiben erhalten)" style="background:rgba(28,46,35,0.9); color:var(--text-muted); border:1px solid #355e45; border-radius:6px; padding:1px 5px; font-size:0.64rem; font-weight:800; line-height:1.2; cursor:pointer;">↺</button>
+            </div>
             <div class="stat-box-val" id="q-stat-done" style="color:var(--accent-green);">0</div>
           </div>
         </div>
@@ -2244,7 +2247,7 @@
       <div class="tile-dark">
         <div class="tile-title-row" style="margin-bottom:6px;">
           <span class="tile-title" style="font-size:0.88rem;">🛠️ System &amp; Version</span>
-          <span class="pill pill-green">Überläufer v0.6.0</span>
+          <span class="pill pill-green">Überläufer v0.6.1</span>
         </div>
         <div class="tile-sub" id="setup-system-info">
           IndexedDB: prüfe…
@@ -2806,10 +2809,39 @@
       if (__dbPromise) return __dbPromise;
       __dbPromise = new Promise((resolve, reject) => {
         if (!window.indexedDB) {
+          __dbPromise = null;
           reject(new Error("IndexedDB nicht verfügbar"));
           return;
         }
+        let settled = false;
+        const failSafeTimer = setTimeout(() => {
+          if (!settled) {
+            settled = true;
+            __dbPromise = null;
+            reject(new Error("IndexedDB-Start blockiert (Timeout)"));
+          }
+        }, 6500);
+        const finishOk = (db) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(failSafeTimer);
+          db.onversionchange = () => {
+            try { db.close(); } catch (e) {}
+            __dbPromise = null;
+          };
+          resolve(db);
+        };
+        const finishErr = (err) => {
+          if (settled) return;
+          settled = true;
+          clearTimeout(failSafeTimer);
+          __dbPromise = null;
+          reject(err || new Error("DB-Fehler"));
+        };
         const req = window.indexedDB.open(DB_NAME, DB_VERSION);
+        req.onblocked = () => {
+          showToast("⚠️ Datenbank kurz durch anderen Tab blockiert…");
+        };
         req.onupgradeneeded = (e) => {
           const db = e.target.result;
           const tx = e.target.transaction;
@@ -2841,8 +2873,8 @@
             db.createObjectStore("visits", { keyPath: "id" });
           }
         };
-        req.onsuccess = () => resolve(req.result);
-        req.onerror = () => reject(req.error || new Error("DB-Fehler"));
+        req.onsuccess = () => finishOk(req.result);
+        req.onerror = () => finishErr(req.error || new Error("DB-Fehler"));
       });
       return __dbPromise;
     }
@@ -4761,8 +4793,27 @@
     }
 
     document.addEventListener("visibilitychange", () => {
-      if (document.visibilityState === "visible" && (__aiWorkerState !== "IDLE" || __isImporting)) {
-        acquireScreenWakeLock();
+      if (document.visibilityState === "visible") {
+        if (__aiWorkerState !== "IDLE" || __isImporting) {
+          acquireScreenWakeLock();
+        }
+        // Beim Zurückwechseln aus der Sauenmatrix automatisch prüfen, was drüben bereits übernommen wurde
+        autoDismissExistingSmxVisits().then((cnt) => {
+          if (cnt > 0 || currentTab === "uebergabe") {
+            renderUebergabeView();
+            if (cnt > 0) renderPruefenVisits(false);
+          }
+          refreshDiagnostics();
+        }).catch(() => {});
+      }
+    });
+
+    window.addEventListener("storage", (ev) => {
+      if (ev && (ev.key === "sm_logs_v1" || ev.key === "sm_beifang_v1" || ev.key === "sm_cam_inbox_v1")) {
+        autoDismissExistingSmxVisits().then(() => {
+          renderUebergabeView();
+          refreshDiagnostics();
+        }).catch(() => {});
       }
     });
 
@@ -5017,7 +5068,7 @@
       return "";
     }
 
-    function populateTrophyTaxonomyDropdowns(trophyType, selectedClass = "") {
+    function populateTrophyTaxonomyDropdowns(trophyType, selectedClass = "", keepCustom = true) {
       const clsSel = document.getElementById("ev-trophy-class");
       const formSel = document.getElementById("ev-trophy-form-preset");
       const coatRow = document.getElementById("ev-trophy-coat-row");
@@ -5026,13 +5077,14 @@
       if (clsSel) {
         const opts = TROPHY_CLASS_OPTIONS[typeKey] || TROPHY_CLASS_OPTIONS.ROTHIRSCH;
         clsSel.innerHTML = opts.map(([val, lbl]) => `<option value="${escapeHTML(val)}">${escapeHTML(lbl)}</option>`).join("");
-        if (selectedClass && !opts.some(([v]) => v === selectedClass)) {
+        const hasMatch = Boolean(selectedClass && opts.some(([v]) => v === selectedClass));
+        if (selectedClass && !hasMatch && keepCustom) {
           const o = document.createElement("option");
           o.value = selectedClass;
           o.textContent = selectedClass;
           clsSel.appendChild(o);
         }
-        clsSel.value = selectedClass || "";
+        clsSel.value = (hasMatch || keepCustom) ? (selectedClass || "") : "";
       }
 
       if (formSel) {
@@ -5049,7 +5101,7 @@
     function onEditTrophyTypeChange() {
       const tType = document.getElementById("ev-trophy-type")?.value || "";
       const prevClass = document.getElementById("ev-trophy-class")?.value || "";
-      populateTrophyTaxonomyDropdowns(tType, prevClass);
+      populateTrophyTaxonomyDropdowns(tType, prevClass, false);
       populateTrophySelect(document.getElementById("ev-trophy-select")?.value || "");
     }
 
@@ -5351,9 +5403,29 @@
         ? `${r.matchedTrophyName}${r.matchReason ? " (" + r.matchReason + ")" : ""}`
         : "";
 
+      const TROPHY_TYPE_TO_CAT = {
+        ROTHIRSCH: "ROTWILD",
+        DAMHIRSCH: "DAMWILD",
+        REHBOCK: "REHWILD",
+        KEILER: "SCHWARZWILD"
+      };
       if (r.isTrophy && normType) {
         v.isTrophy = true;
         v.trophyType = normType;
+        const mappedCat = TROPHY_TYPE_TO_CAT[normType] || "";
+        if (mappedCat && mappedCat !== v.category && v.trophyConfidence !== "UNKLAR" && !v.manualEdited) {
+          v.category = mappedCat;
+          v.speciesDetail = getTrophyTypeLabelDE(normType);
+          if (mappedCat === "SCHWARZWILD") {
+            if (sumBoarBreakdown(v.boarBreakdown) === 0) {
+              v.boarBreakdown = Object.assign(emptyBoarBreakdown(), { keiler: Math.max(1, Number(v.maxCount || 1)) });
+              v.maxCount = sumBoarBreakdown(v.boarBreakdown);
+            }
+          } else {
+            v.boarBreakdown = emptyBoarBreakdown();
+            v.rottenTag = "";
+          }
+        }
         v.trophyClass = String(r.trophyClass || "").trim();
         v.trophyStatus = ["VERFEGT", "BAST", "ABGEWORFEN", "UNKLAR"].includes(String(r.trophyStatus || "").toUpperCase())
           ? String(r.trophyStatus).toUpperCase()
@@ -5397,7 +5469,7 @@
 
     let __deepTrophyBusy = false;
 
-    async function runDeepTrophyCheckForVisit(visitId, silent = false) {
+    async function runDeepTrophyCheckForVisit(visitId, silent = false, signal = null) {
       if (__deepTrophyBusy) {
         if (!silent) showToast("⏳ Trophäen-Tiefenprüfung läuft bereits…");
         return null;
@@ -5430,7 +5502,7 @@
       __deepTrophyBusy = true;
       if (!silent) showToast(`🔬 Starte Trophäen-Tiefenprüfung (${v.spotName})…`);
       try {
-        const { result, modelUsed, frameCount } = await callGeminiDeepTrophyCheck(v, apiKey);
+        const { result, modelUsed, frameCount } = await callGeminiDeepTrophyCheck(v, apiKey, signal);
         applyDeepTrophyResultToVisit(v, result, modelUsed);
         if (v.isTrophy && !v.trophyPhotoDataUrl) {
           v.trophyPhotoDataUrl = await generateCompressedTrophyPhotoDataUrl(v);
@@ -5469,6 +5541,7 @@
 
     async function runAutoDeepTrophyPassAfterQueue() {
       if (!getAutoDeepTrophyPref()) return 0;
+      if (__aiWorkerState === "PAUSING" || __aiWorkerState === "STOPPING") return 0;
       const apiKey = (safeGetItem(UL_API_KEY_STORAGE, "") || "").trim();
       if (!apiKey || !navigator.onLine) return 0;
       const allVisits = await idbGetAll("visits").catch(() => []);
@@ -5482,12 +5555,17 @@
 
       let checked = 0;
       for (let i = 0; i < targets.length; i++) {
+        if (__aiWorkerState === "PAUSING" || __aiWorkerState === "STOPPING") break;
         const v = targets[i];
         updateTachoUI("🔬 Trophäe", "pill-yellow", `Stufe 2: Trophäen-Tiefenprüfung ${i + 1}/${targets.length} (${v.spotName})…`);
-        const ok = await runDeepTrophyCheckForVisit(v.id, true);
+        __aiAbortController = new AbortController();
+        const ok = await runDeepTrophyCheckForVisit(v.id, true, __aiAbortController.signal);
         if (ok) checked++;
+        if (__aiWorkerState === "PAUSING" || __aiWorkerState === "STOPPING") break;
         if (i < targets.length - 1) {
-          await new Promise(r => setTimeout(r, Math.max(4000, getPaceSecPref() * 1000)));
+          const waitSec = Math.max(4, getPaceSecPref());
+          const cont = await runCountdownSeconds(waitSec, `Stufe 2: Nächster Trophäenträger (${i + 2}/${targets.length}) in`);
+          if (!cont) break;
         }
       }
       return checked;
@@ -5537,12 +5615,12 @@
               trophyDetail: { type: "STRING" },
               trophyStatus: {
                 type: "STRING",
-                enum: ["VERFEGT", "BAST", "ABGEWORFEN", "UNKLAR", ""]
+                enum: ["VERFEGT", "BAST", "ABGEWORFEN", "UNKLAR", "KEINE"]
               },
               coatColor: { type: "STRING" },
               trophyConfidence: {
                 type: "STRING",
-                enum: ["SICHER", "TEILWEISE", "UNKLAR", ""]
+                enum: ["SICHER", "TEILWEISE", "UNKLAR", "KEINE"]
               },
               boarBreakdown: {
                 type: "OBJECT",
@@ -5618,9 +5696,9 @@
             "   - DAMWILD (Damhirsch): Spießer, Knieper/Löffler, Halbschaufler, Schaufler, Vollschaufler. Klasse vorschlagen (IIIb/IIIa/IIb/IIa/Ib/Ia) und zwingend Farbschlag in coatColor ('Normal/Rotbraun', 'Schwarz', 'Weiß', 'Menil').",
             "   - ROTWILD (Rothirsch): Schmalspießer, Gabler, Sechser, Achter, Eissprossenzehner, Gerader/Ungerader Zehner, Gerader/Ungerader Zwölfender, Vierzehnender+, Krone einseitig/beidseitig (3+ Enden über Mittelsprosse). Klasse nach Körperbau + Geweih vorschlagen: IIIb/IIIa (1.–3. Kopf), IIb (4.–10. Kopf ohne Krone), IIa (4.–10. Kopf beids. Krone), Ib/Ia (ab ~11. Kopf).",
             "   - SCHWARZWILD (Keiler): NUR wenn mindestens ein echtes Merkmal sichtbar (Waffen/Gewehre/Haderer, Pinsel, Klötze, markanter hoher Widerrist/Doppelbuckel): isTrophy=true, trophyType='KEILER', trophyClass ('Überläuferkeiler'/'Junger Keiler'/'Mittelalter Keiler'/'Reifer / Hauptkeiler').",
-            "   - Geweihstatus in trophyStatus ('VERFEGT', 'BAST', 'ABGEWORFEN', 'UNKLAR' oder '').",
-            "   - EHRLICHKEITSPFLICHT: Setze trophyConfidence ('SICHER', 'TEILWEISE' oder 'UNKLAR'). Wenn Enden im dunklen/unscharfen Bild nicht sicher zählbar sind, KEINE Enden erfinden -> trophyDetail='Geweih/Enden nicht sicher zählbar', trophyClass='', trophyConfidence='UNKLAR'.",
-            "   - Kein Trophäenträger: isTrophy=false, trophyType='KEINE', trophyClass='', trophyDetail='', trophyStatus='', coatColor='', trophyConfidence=''.",
+            "   - Geweihstatus in trophyStatus ('VERFEGT', 'BAST', 'ABGEWORFEN', 'UNKLAR' oder 'KEINE').",
+            "   - EHRLICHKEITSPFLICHT: Setze trophyConfidence ('SICHER', 'TEILWEISE', 'UNKLAR' oder 'KEINE'). Wenn Enden im dunklen/unscharfen Bild nicht sicher zählbar sind, KEINE Enden erfinden -> trophyDetail='Geweih/Enden nicht sicher zählbar', trophyClass='', trophyConfidence='UNKLAR'.",
+            "   - Kein Trophäenträger: isTrophy=false, trophyType='KEINE', trophyClass='', trophyDetail='', trophyStatus='KEINE', coatColor='', trophyConfidence='KEINE'.",
             "5. Zähle bei totalCount das Maximum gleichzeitig sichtbarer Individuen auf EINEM Bild des Eintrags (nicht über Video-Frames addieren!).",
             "6. Bei SCHWARZWILD: Verteile totalCount auf boarBreakdown. Nur wenn Geschlecht/Klasse wirklich sicher erkennbar ist (z. B. Pinsel/Waffen/Klötze -> keiler, Striche/führend -> bache, typische Streifen/geringe Größe -> frischling), nutze exakte Klassen. Sonst grossUnklar, kleinUnklar oder unbekannt. Summe muss totalCount entsprechen; bei Nicht-Schwarzwild alle Werte 0.",
             "7. INFOBALKEN- & VIDEO-START-INFO-OCR (SEHR WICHTIG):",
@@ -5830,9 +5908,11 @@
       } else {
         safeEntry.trophyClass = String(safeEntry.trophyClass || "").trim();
         safeEntry.trophyDetail = String(safeEntry.trophyDetail || "").trim();
-        safeEntry.trophyStatus = String(safeEntry.trophyStatus || "").trim().toUpperCase();
+        const rawSt = String(safeEntry.trophyStatus || "").trim().toUpperCase();
+        safeEntry.trophyStatus = ["VERFEGT", "BAST", "ABGEWORFEN", "UNKLAR"].includes(rawSt) ? rawSt : "";
         safeEntry.coatColor = String(safeEntry.coatColor || "").trim();
-        safeEntry.trophyConfidence = String(safeEntry.trophyConfidence || "").trim().toUpperCase();
+        const rawConf = String(safeEntry.trophyConfidence || "").trim().toUpperCase();
+        safeEntry.trophyConfidence = ["SICHER", "TEILWEISE", "UNKLAR"].includes(rawConf) ? rawConf : "";
       }
       safeEntry.ocrCameraInfo = String(safeEntry.ocrCameraInfo || "").trim();
 
@@ -6180,26 +6260,35 @@
         }
       } finally {
         const wasPausing = (__aiWorkerState === "PAUSING");
-        __aiWorkerState = "IDLE";
+        const wasStopping = (__aiWorkerState === "STOPPING");
         __aiAbortController = null;
-        if (!__isImporting) {
-          await releaseScreenWakeLock();
-        }
-        await flagBatchDateOutliers();
-        await syncVisitsFromQueue(false);
-        if (!wasPausing && processedInRun > 0) {
-          const deepCnt = await runAutoDeepTrophyPassAfterQueue();
-          if (deepCnt > 0) {
-            showToast(`🔬 ${deepCnt} Trophäenträger automatisch tiefengeprüft`);
+        try {
+          await flagBatchDateOutliers();
+          await syncVisitsFromQueue(false);
+          if (!wasPausing && !wasStopping && processedInRun > 0) {
+            const deepCnt = await runAutoDeepTrophyPassAfterQueue();
+            if (deepCnt > 0) {
+              showToast(`🔬 ${deepCnt} Trophäenträger automatisch tiefengeprüft`);
+            }
           }
-        }
-        await renderQueueOverview();
-        await renderPruefenVisits();
-        await renderUebergabeView();
-        if (wasPausing) {
-          updateTachoUI("Pausiert", "pill-yellow", "⏸️ Pausiert. Tippe auf „KI-Auswertung starten“, um nahtlos fortzusetzen.");
-        } else {
-          updateTachoUI();
+        } finally {
+          const stoppedDuringDeep = (__aiWorkerState === "STOPPING");
+          const pausedDuringDeep = (__aiWorkerState === "PAUSING");
+          __aiWorkerState = "IDLE";
+          __aiAbortController = null;
+          if (!__isImporting) {
+            await releaseScreenWakeLock();
+          }
+          await renderQueueOverview();
+          await renderPruefenVisits();
+          await renderUebergabeView();
+          if (wasPausing || pausedDuringDeep) {
+            updateTachoUI("Pausiert", "pill-yellow", "⏸️ Pausiert. Tippe auf „KI-Auswertung starten“, um nahtlos fortzusetzen.");
+          } else if (wasStopping || stoppedDuringDeep) {
+            updateTachoUI("Gestoppt", "pill-yellow", "⏹️ Gestoppt. Bereits ausgewertete Dateien sind sicher gespeichert.");
+          } else {
+            updateTachoUI();
+          }
         }
       }
     }
@@ -6222,11 +6311,48 @@
     // =========================================================================
     // 8. WARTESCHLANGEN-ÜBERSICHT & TAB PRÜFEN VORSCHAU
     // =========================================================================
+    const UL_DONE_SINCE_STORAGE = "ul_done_counter_since_v1";
+
+    function getDoneCounterSinceTs() {
+      const v = Number(safeGetItem(UL_DONE_SINCE_STORAGE, "0"));
+      return Number.isFinite(v) && v > 0 ? v : 0;
+    }
+
+    function countVisibleDoneItems(doneItems) {
+      const since = getDoneCounterSinceTs();
+      if (!since) return doneItems.length;
+      return doneItems.filter(x => Number(x.analyzedAt || x.createdAt || 0) >= since).length;
+    }
+
+    async function resetDoneCounterBaseline() {
+      const items = await idbGetAll("queue").catch(() => []);
+      const done = items.filter(x => x.status === "DONE");
+      const visibleCnt = countVisibleDoneItems(done);
+      const since = getDoneCounterSinceTs();
+      if (visibleCnt === 0 && since > 0 && done.length > 0) {
+        if (confirm(`Der Zähler steht aktuell auf 0. Stattdessen wieder alle ${done.length} bisher ausgewerteten Aufnahmen anzeigen?`)) {
+          safeSetItem(UL_DONE_SINCE_STORAGE, "0");
+          await renderQueueOverview();
+          showToast(`↺ Zähler zeigt wieder alle ${done.length} Aufnahmen`);
+        }
+        return;
+      }
+      if (!confirm(`Anzeige „Bereits fertig“ (${visibleCnt}) jetzt auf 0 zurücksetzen?
+
+Alle Besuche, Vorschaubilder und der SD-Karten-Dublettenschutz bleiben dabei vollständig erhalten.`)) {
+        return;
+      }
+      safeSetItem(UL_DONE_SINCE_STORAGE, String(Date.now()));
+      await renderQueueOverview();
+      showToast("↺ Zähler „Bereits fertig“ auf 0 gesetzt (Daten unverändert)");
+    }
+
     async function renderQueueOverview() {
       await loadQuotaState();
       const items = await idbGetAll("queue").catch(() => []);
       const pending = items.filter(x => x.status === "PENDING");
       const done = items.filter(x => x.status === "DONE");
+      const doneVisibleCount = countVisibleDoneItems(done);
 
       const imgCnt = pending.filter(x => x.kind === "IMAGE").length;
       const vidCnt = pending.filter(x => x.kind === "VIDEO").length;
@@ -6240,7 +6366,7 @@
       const pEl = document.getElementById("q-stat-packs");
       if (pEl) pEl.textContent = `${estPacks}`;
       const dEl = document.getElementById("q-stat-done");
-      if (dEl) dEl.textContent = `${done.length}`;
+      if (dEl) dEl.textContent = `${doneVisibleCount}`;
 
       const navBadge = document.getElementById("nav-badge-import");
       if (navBadge) {
@@ -6249,13 +6375,13 @@
       }
       await updatePruefenNavBadge();
       const hdrChip = document.getElementById("header-queue-chip");
-      if (hdrChip) hdrChip.textContent = `Offen: ${pending.length} · Fertig: ${done.length}`;
+      if (hdrChip) hdrChip.textContent = `Offen: ${pending.length} · Fertig: ${doneVisibleCount}`;
       const homeQ = document.getElementById("home-queue-pill");
       if (homeQ) {
         if (pending.length > 0) {
           homeQ.textContent = `📥 Warteschlange: ${pending.length} offen (${estPacks} KI-Pakete)`;
-        } else if (done.length > 0) {
-          homeQ.textContent = `✅ ${done.length} Dateien fertig ausgewertet`;
+        } else if (doneVisibleCount > 0) {
+          homeQ.textContent = `✅ ${doneVisibleCount} Dateien fertig ausgewertet`;
         } else {
           homeQ.textContent = `📥 Warteschlange: 0 Dateien bereit`;
         }
@@ -7101,7 +7227,7 @@
           v.reviewState === "DISMISSED" ||
           isManualTrash ||
           (v.fromBackup && !hasAnyQueueItem) ||
-          (!resetEdited && v.manualEdited);
+          (!resetEdited && (v.manualEdited || v.trophyDeepChecked));
 
         if (isProtected) {
           protectedVisits.push(v);
@@ -7983,9 +8109,10 @@
       if (supportsTrophy) {
         const typeSel = document.getElementById("ev-trophy-type");
         const defType = defaultTrophyTypeForCategory(cat);
-        if (typeSel && defType && (!typeSel.value || document.getElementById("ev-is-trophy")?.checked)) {
+        if (typeSel && defType) {
           typeSel.value = defType;
         }
+        populateTrophyTaxonomyDropdowns(typeSel?.value || defType, document.getElementById("ev-trophy-class")?.value || "", false);
         populateTrophySelect(document.getElementById("ev-trophy-select")?.value || "");
       } else {
         const chk = document.getElementById("ev-is-trophy");
@@ -8837,7 +8964,7 @@
         inboxId: `ul_${v.id}`,
         visitId: v.id,
         source: "UEBERLAEUFER",
-        sourceVersion: "0.6.0",
+        sourceVersion: "0.6.1",
         createdAt: Date.now(),
         status: isSw ? (statusVal || "GREEN") : (statusVal || "BEIFANG"),
         category: cat,
@@ -8943,7 +9070,36 @@
       }
     }
 
+    async function autoDismissExistingSmxVisits() {
+      const visits = await idbGetAll("visits").catch(() => []);
+      const toDismiss = [];
+      for (const v of visits) {
+        if (!v || v.reviewState !== "CONFIRMED" || v.keepInUebergabe) continue;
+        const effectiveTarget = (v.mappedKanzel || v.spotName || "Revier allgemein").trim();
+        let existsInSmx = false;
+        if (v.category === "SCHWARZWILD") {
+          existsInSmx = findPossibleSauenmatrixDuplicate(v, effectiveTarget);
+        } else if (isBycatchTransferVisit(v)) {
+          existsInSmx = findPossibleBeifangDuplicate(v, effectiveTarget);
+        }
+        if (existsInSmx) {
+          removeInboxEntryByVisitIdSilent(v.id);
+          v.reviewState = "DISMISSED";
+          v.dismissedAt = Date.now();
+          v.autoDismissedInSmx = true;
+          v.updatedAt = Date.now();
+          await idbPut("visits", v);
+          toDismiss.push(v);
+        }
+      }
+      if (toDismiss.length > 0) {
+        await cleanupAiBlobsForVisits(toDismiss);
+      }
+      return toDismiss.length;
+    }
+
     async function renderUebergabeView() {
+      await autoDismissExistingSmxVisits();
       const visits = (await idbGetAll("visits").catch(() => []))
         .sort((a, b) => (b.startTs || 0) - (a.startTs || 0));
       const inbox = readCamInbox();
@@ -9180,7 +9336,7 @@
             return `
             <div class="spot-row" style="padding:7px 9px; margin-bottom:6px;">
               <div style="font-size:0.73rem; line-height:1.35;">
-                <strong>${escapeHTML(catLbl)} ${escapeHTML(v.sentKanzel || v.mappedKanzel || v.spotName)}</strong> (${v.maxCount || 0}×) ${v.reviewState === "DISMISSED" ? `<span class="pill pill-blue" style="font-size:0.62rem;">✓ ausgeblendet</span>` : ""}${v.isTrophy ? ` <span class="pill pill-trophy" style="font-size:0.64rem;">🏆 ${escapeHTML(v.trophyClass ? v.trophyClass + " · " : "")}${escapeHTML(v.trophyDetail || getTrophyTypeLabelDE(v.trophyType))}</span>` : ""}<br>
+                <strong>${escapeHTML(catLbl)} ${escapeHTML(v.sentKanzel || v.mappedKanzel || v.spotName)}</strong> (${v.maxCount || 0}×) ${v.reviewState === "DISMISSED" ? `<span class="pill pill-blue" style="font-size:0.62rem;">${v.autoDismissedInSmx ? "✓ in SMX" : "✓ ausgeblendet"}</span>` : ""}${v.isTrophy ? ` <span class="pill pill-trophy" style="font-size:0.64rem;">🏆 ${escapeHTML(v.trophyClass ? v.trophyClass + " · " : "")}${escapeHTML(v.trophyDetail || getTrophyTypeLabelDE(v.trophyType))}</span>` : ""}<br>
                 <span style="color:var(--text-muted);">${escapeHTML(formatDateDE(v.startTs))} · ${escapeHTML(formatTimeHHMM(v.startTs))}–${escapeHTML(formatTimeHHMM(v.endTs))}${v.category !== "SCHWARZWILD" && v.speciesDetail ? ` · ${escapeHTML(v.speciesDetail)}` : ""}</span>
               </div>
               <button type="button" class="btn-sm btn-no" style="padding:4px 8px; font-size:0.7rem;" onclick="resetSentVisitToConfirmed('${escapeHTML(v.id)}')">↺ Erneut</button>
@@ -9224,6 +9380,7 @@
       if (!v) return;
       removeInboxEntryByVisitIdSilent(v.id);
       v.reviewState = "DISMISSED";
+      delete v.keepInUebergabe;
       v.dismissedAt = Date.now();
       v.updatedAt = Date.now();
       await idbPut("visits", v);
@@ -9318,6 +9475,8 @@
         v.reviewState = "SENT";
         v.sentAt = Date.now();
         v.sentKanzel = kanzel;
+        delete v.keepInUebergabe;
+        delete v.autoDismissedInSmx;
         v.updatedAt = Date.now();
         await idbPut("visits", v);
       }
@@ -9388,6 +9547,8 @@
       if (!v) return;
       removeInboxEntryByVisitIdSilent(v.id);
       v.reviewState = "CONFIRMED";
+      v.keepInUebergabe = true;
+      delete v.autoDismissedInSmx;
       v.updatedAt = Date.now();
       await idbPut("visits", v);
       await renderUebergabeView();
@@ -9408,7 +9569,7 @@
 
     async function copyWeeklyGameReport() {
       const visits = (await idbGetAll("visits").catch(() => []))
-        .filter(v => v.reviewState === "CONFIRMED" || v.reviewState === "SENT")
+        .filter(v => v.reviewState === "CONFIRMED" || v.reviewState === "SENT" || v.reviewState === "DISMISSED")
         .sort((a, b) => (a.startTs || 0) - (b.startTs || 0));
 
       if (visits.length === 0) {
@@ -9464,7 +9625,7 @@
 
       const payload = {
         app: "Ueberlaeufer",
-        version: "0.6.0",
+        version: "0.6.1",
         exportedAt: new Date().toISOString(),
         preferences: {
           packSize: getPackSizePref(),
@@ -10333,39 +10494,45 @@
       syncVisitGapSelectors();
       registerUeberlaeuferServiceWorker();
 
-      let loadedLogo = null;
+      // Original-Logo sofort sichtbar machen, damit Startcockpit niemals leer hängt
+      applyLogoEverywhere(null);
+      showHomeStartScreen();
+
       try {
         await openUeberlaeuferDB();
         const savedLogo = await idbGet("meta", "customLogo");
         if (savedLogo && savedLogo.value) {
-          loadedLogo = savedLogo.value;
+          applyLogoEverywhere(savedLogo.value);
         }
       } catch (e) {}
-      applyLogoEverywhere(loadedLogo);
 
-      try {
+      const safeStep = async (fn) => {
+        try { await fn(); } catch (e) {}
+      };
+
+      await safeStep(async () => {
         const existingDoneFps = (await idbGetAll("queue").catch(() => []))
           .filter(x => x.status === "DONE" && x.fingerprint)
           .map(x => x.fingerprint);
         if (existingDoneFps.length > 0) {
           await recordSeenFingerprints(existingDoneFps);
         }
-      } catch (e) {}
+      });
 
-      await syncSharedCameraSpots();
-      await loadQuotaState();
-      await renderSpotsViews();
-      await renderCamerasList();
-      await refreshImportSelectors();
-      await renderQueueOverview();
-      await syncVisitsFromQueue(false);
-      await renderPruefenVisits();
-      await renderUebergabeView();
-      await refreshDiagnostics();
-      showHomeStartScreen();
-      history.pushState({ protected: true }, "");
+      await safeStep(() => syncSharedCameraSpots());
+      await safeStep(() => loadQuotaState());
+      await safeStep(() => renderSpotsViews());
+      await safeStep(() => renderCamerasList());
+      await safeStep(() => refreshImportSelectors());
+      await safeStep(() => renderQueueOverview());
+      await safeStep(() => syncVisitsFromQueue(false));
+      await safeStep(() => autoDismissExistingSmxVisits());
+      await safeStep(() => renderPruefenVisits());
+      await safeStep(() => renderUebergabeView());
+      await safeStep(() => refreshDiagnostics());
+      try { history.pushState({ protected: true }, ""); } catch (e) {}
       // Falls Dateien aus der Samsung-Galerie über „Teilen → Überläufer“ ankamen: sofort importieren!
-      await consumeSharedGalleryFiles();
+      await safeStep(() => consumeSharedGalleryFiles());
     }
 
     initUeberlaeufer();

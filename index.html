@@ -1573,7 +1573,7 @@
       <div class="tile-green">
         <div class="tile-title-row">
           <span class="tile-title">📥 SD-Stapel importieren</span>
-          <span class="pill pill-green">1280 px · .JPG / .MP4 / .AVI</span>
+          <span class="pill pill-green">1440 px · .JPG / .MP4 / .AVI</span>
         </div>
         <p class="tile-sub" style="margin-bottom:11px;">
           Wähle Kamera &amp; Standort und lade deine <strong>.JPG</strong>-Fotos, <strong>.MP4</strong>-Clips oder direkt <strong>.AVI</strong>-Wildkamera-Videos (integrierter MJPEG-Extraktor – kein Umwandeln nötig). Bilder aus der Samsung-Galerie kannst du auch direkt über <strong>Teilen → Überläufer</strong> herüberschicken.
@@ -2094,7 +2094,7 @@
         </div>
 
         <button type="button" class="btn-sm btn-warn" style="width:100%; padding:9px; margin-bottom:10px;" onclick="cleanupCompletedAiBlobs()">
-          🧹 Große 1024-px-Arbeitsbilder fertiger Besuche aufräumen
+          🧹 Große 1440-px-Arbeitsbilder fertiger Besuche aufräumen
         </button>
 
         <div class="stat-grid-2" style="margin-bottom:8px;">
@@ -2400,7 +2400,7 @@
   </div>
 
   <!-- ===================================================================== -->
-  <!-- MODAL 4: RESTLICHT-LUPE (1024-PX-BILDER, HELLIGKEIT/KONTRAST/ZOOM)    -->
+  <!-- MODAL 4: RESTLICHT-LUPE (1440-PX-BILDER, HELLIGKEIT/KONTRAST/ZOOM)    -->
   <!-- ===================================================================== -->
   <div class="modal-backdrop" id="lupe-modal" onclick="if(event.target===this) closeLupeModal()">
     <div class="modal-sheet">
@@ -3971,7 +3971,7 @@
     }
 
     async function buildAiAndThumbBlobs(source, srcW, srcH) {
-      const maxAi = 1280;
+      const maxAi = 1440;
       const aiScale = Math.min(1, maxAi / Math.max(srcW, srcH));
       const aiW = Math.max(1, Math.round(srcW * aiScale));
       const aiH = Math.max(1, Math.round(srcH * aiScale));
@@ -5170,10 +5170,13 @@
 
     async function collectBestFramesForDeepTrophy(visit, maxFrames = 3) {
       const candidates = [];
+      let hasHighRes = false;
       for (const qid of (visit.itemIds || [])) {
         const qItem = await idbGet("queue", qid).catch(() => null);
         if (!qItem) continue;
-        const blobs = (Array.isArray(qItem.aiBlobs) && qItem.aiBlobs.length > 0)
+        const itemHasHighRes = Array.isArray(qItem.aiBlobs) && qItem.aiBlobs.length > 0;
+        if (itemHasHighRes) hasHighRes = true;
+        const blobs = itemHasHighRes
           ? qItem.aiBlobs
           : (qItem.thumbBlob ? [qItem.thumbBlob] : []);
         blobs.forEach((blob, fIdx) => {
@@ -5181,6 +5184,7 @@
           candidates.push({
             blob,
             isBest,
+            isHighRes: itemHasHighRes,
             brightness: Number(qItem.avgBrightness || 0),
             ts: Number(qItem.effectiveTs || 0),
             fileName: qItem.fileName || "Bild"
@@ -5188,18 +5192,21 @@
         });
       }
       if (candidates.length === 0 && visit.thumbBlob) {
-        candidates.push({ blob: visit.thumbBlob, isBest: true, brightness: 50, ts: visit.startTs || 0, fileName: "Vorschau" });
+        candidates.push({ blob: visit.thumbBlob, isBest: true, isHighRes: false, brightness: 50, ts: visit.startTs || 0, fileName: "Vorschau" });
       }
-      if (candidates.length <= maxFrames) return candidates;
-
-      // Wähle bis zu 3 möglichst unterschiedliche & scharfe Bilder (Bestbild + früh + spät/anderer Winkel)
-      const picked = [];
-      const best = candidates.find(c => c.isBest) || candidates.reduce((a, b) => (b.brightness > a.brightness ? b : a), candidates[0]);
-      picked.push(best);
-      const others = candidates.filter(c => c !== best);
-      if (others.length > 0) picked.push(others[0]);
-      if (others.length > 1) picked.push(others[others.length - 1]);
-      return picked.slice(0, maxFrames);
+      let selected = candidates;
+      if (candidates.length > maxFrames) {
+        // Wähle bis zu 3 möglichst unterschiedliche & scharfe Bilder (Bestbild + früh + spät/anderer Winkel)
+        const picked = [];
+        const best = candidates.find(c => c.isBest) || candidates.reduce((a, b) => (b.brightness > a.brightness ? b : a), candidates[0]);
+        picked.push(best);
+        const others = candidates.filter(c => c !== best);
+        if (others.length > 0) picked.push(others[0]);
+        if (others.length > 1) picked.push(others[others.length - 1]);
+        selected = picked.slice(0, maxFrames);
+      }
+      selected.usedLowResFallback = !hasHighRes;
+      return selected;
     }
 
     function buildDeepTrophyModelOrder(qState) {
@@ -5229,8 +5236,7 @@
       const profilesBlock = relevantProfiles.length > 0
         ? relevantProfiles.slice(0, 15).map(p =>
             `- ID="${p.id}" | Name="${p.name}" | Art=${p.species || "?"} | Alter=${p.ageEstimate || "?"}${p.traits ? ` | Merkmale=${p.traits}` : ""}`
-          ).join("
-")
+          ).join("\n")
         : "(Noch keine bekannten Steckbriefe in sm_trophaeen_v1 vorhanden)";
 
       const promptLines = [
@@ -5255,8 +5261,7 @@
         "   - visibilityLevel='UNKLAR': IR-Überbelichtung, starke Bewegung, verdeckt oder zu weit weg -> ERFINDE AUSDRÜCKLICH KEINE ENDEN! Setze trophyForm='Geweih/Enden nicht sicher zählbar', trophyClass='' und begründe kurz in visibilityReason."
       ];
 
-      const parts = [{ text: promptLines.join("
-") }];
+      const parts = [{ text: promptLines.join("\n") }];
       for (let i = 0; i < frames.length; i++) {
         const b64 = await blobToBase64Pure(frames[i].blob);
         parts.push({ text: `Bild ${i + 1}/${frames.length} (${frames[i].fileName})` });
@@ -5408,6 +5413,19 @@
       }
       const v = await idbGet("visits", visitId).catch(() => null);
       if (!v) return null;
+
+      if (!silent) {
+        const preFrames = await collectBestFramesForDeepTrophy(v, 3);
+        if (preFrames.length === 0) {
+          showToast("⚠️ Keine Bilddaten für diesen Besuch vorhanden");
+          return null;
+        }
+        if (preFrames.usedLowResFallback) {
+          if (!confirm("ℹ️ Die großen 1440-px-Arbeitsbilder dieses bereits bestätigten Besuchs wurden schon aufgeräumt – es liegt nur noch die 320-px-Vorschau vor.\n\nTrotzdem mit der kleineren Vorschau tiefenprüfen?")) {
+            return null;
+          }
+        }
+      }
 
       __deepTrophyBusy = true;
       if (!silent) showToast(`🔬 Starte Trophäen-Tiefenprüfung (${v.spotName})…`);
@@ -7687,7 +7705,7 @@
             ocrCameraInfo: qItem.aiResult?.ocrCameraInfo || "",
             frameLabel: !hasHighRes
               ? "Vorschau (320 px · Arbeitsbild aufgeräumt)"
-              : (blobs.length > 1 ? `Video-Frame ${fIdx + 1}/${blobs.length}` : "Foto (1024 px)")
+              : (blobs.length > 1 ? `Video-Frame ${fIdx + 1}/${blobs.length}` : "Foto (1440 px)")
           });
         });
       }
@@ -7714,8 +7732,9 @@
       const lupeConfBtn = document.getElementById("lupe-confirm-btn");
       if (lupeConfBtn) {
         const isSent = v.reviewState === "SENT";
+        const isDismissed = v.reviewState === "DISMISSED";
         lupeConfBtn.disabled = isSent;
-        lupeConfBtn.textContent = isSent ? "📤 Übergeben" : "✅ Bestätigen";
+        lupeConfBtn.textContent = isSent ? "📤 Übergeben" : (isDismissed ? "↺ Wieder bereit" : "✅ Bestätigen");
       }
       setLupePreset(100, 100, 100);
       renderLupeFrame();
@@ -8956,8 +8975,13 @@
       const inboxJsonStr = JSON.stringify(inbox, null, 2);
       const inboxKB = ((inboxJsonStr.length * 2) / 1024).toFixed(1);
       setTxt("inbox-size-kb", `${inboxKB} KB`);
+      const previewInbox = inbox.map(entry => {
+        if (!entry || !entry.trophyPhotoDataUrl) return entry;
+        const approxKB = Math.max(1, Math.round((entry.trophyPhotoDataUrl.length * 0.75) / 1024));
+        return Object.assign({}, entry, { trophyPhotoDataUrl: `[Best-Bild: ~${approxKB} KB]` });
+      });
       const jsonPrevEl = document.getElementById("ueb-inbox-json-preview");
-      if (jsonPrevEl) jsonPrevEl.textContent = inboxJsonStr;
+      if (jsonPrevEl) jsonPrevEl.textContent = JSON.stringify(previewInbox, null, 2);
 
       // 1. Liste bereiter Schwarzwild-Besuche
       const readyListEl = document.getElementById("ueb-ready-list");
@@ -9203,6 +9227,7 @@
       v.dismissedAt = Date.now();
       v.updatedAt = Date.now();
       await idbPut("visits", v);
+      await cleanupAiBlobsForVisits(v);
       await renderUebergabeView();
       await renderPruefenVisits(false);
       await refreshDiagnostics();
@@ -9233,6 +9258,7 @@
         v.updatedAt = Date.now();
         await idbPut("visits", v);
       }
+      await cleanupAiBlobsForVisits(targets);
       await renderUebergabeView();
       await renderPruefenVisits(false);
       await refreshDiagnostics();
@@ -9272,10 +9298,20 @@
 
       if (visitsToMarkSent.length === 0) return;
 
-      // Erst sicher in localStorage schreiben, danach erst Status auf SENT setzen!
+      // Erst sicher in localStorage schreiben (bei Platzmangel Fallback ohne Best-Bild), danach Status auf SENT setzen!
+      let strippedPhotoFallback = false;
       if (!writeCamInbox(inbox)) {
-        showToast("⚠️ localStorage voll – Übergabe abgebrochen");
-        return;
+        const newInboxIds = new Set(visitsToMarkSent.map(x => `ul_${x.v.id}`));
+        inbox.forEach(entry => {
+          if (entry && newInboxIds.has(entry.inboxId) && entry.trophyPhotoDataUrl) {
+            entry.trophyPhotoDataUrl = "";
+            strippedPhotoFallback = true;
+          }
+        });
+        if (!strippedPhotoFallback || !writeCamInbox(inbox)) {
+          showToast("⚠️ localStorage voll – Übergabe abgebrochen");
+          return;
+        }
       }
 
       for (const { v, kanzel } of visitsToMarkSent) {
@@ -9290,7 +9326,11 @@
       await renderPruefenVisits();
       await refreshDiagnostics();
       const totalMoved = added + updated;
-      showToast(updated > 0 && added === 0 ? `📤 ${updated} Eintrag/Einträge in Durchreiche aktualisiert` : `📤 ${totalMoved} ${labelNoun} in Durchreiche gelegt`);
+      if (strippedPhotoFallback) {
+        showToast(`📤 ${totalMoved} ${labelNoun} übergeben (ohne Best-Bild wegen Speicher-Limit)`);
+      } else {
+        showToast(updated > 0 && added === 0 ? `📤 ${updated} Eintrag/Einträge in Durchreiche aktualisiert` : `📤 ${totalMoved} ${labelNoun} in Durchreiche gelegt`);
+      }
     }
 
     async function pushSelectedVisitsToInbox() {
@@ -9430,7 +9470,9 @@
           packSize: getPackSizePref(),
           paceSec: getPaceSecPref(),
           visitGapMin: getVisitGapMinutes(),
-          runLimit: getAiRunLimitPref()
+          runLimit: getAiRunLimitPref(),
+          autoDeepTrophy: getAutoDeepTrophyPref(),
+          deepPreferPro: getDeepPreferProPref()
         },
         cameras,
         spots,
@@ -9469,6 +9511,7 @@
           for (const sp of data.spots) {
             if (sp && sp.id) { await idbPut("spots", sp); spotAdded++; }
           }
+          await pushCurrentSpotsToSharedStorage();
         }
         if (Array.isArray(data.cameras)) {
           for (const c of data.cameras) {
@@ -9479,9 +9522,12 @@
           for (const v of data.visits) {
             if (!v || !v.id) continue;
             const existing = await idbGet("visits", v.id).catch(() => null);
-            // Vorhandenes Vorschaubild auf diesem Gerät bewahren, falls bereits da
+            // Vorhandenes Vorschaubild & Trophäen-Best-Bild auf diesem Gerät bewahren, falls bereits da
             if (existing && existing.thumbBlob && !v.thumbBlob) {
               v.thumbBlob = existing.thumbBlob;
+            }
+            if (existing && existing.trophyPhotoDataUrl && !v.trophyPhotoDataUrl) {
+              v.trophyPhotoDataUrl = existing.trophyPhotoDataUrl;
             }
             v.fromBackup = true;
             await idbPut("visits", v);
@@ -9493,7 +9539,10 @@
           if (data.preferences.paceSec) safeSetItem("ul_pace_sec_v1", String(data.preferences.paceSec));
           if (data.preferences.visitGapMin) safeSetItem(VISIT_GAP_STORAGE, String(data.preferences.visitGapMin));
           if (data.preferences.runLimit !== undefined) safeSetItem("ul_run_limit_v1", String(data.preferences.runLimit));
+          if (data.preferences.autoDeepTrophy !== undefined) safeSetItem(UL_AUTO_DEEP_TROPHY_KEY, data.preferences.autoDeepTrophy ? "1" : "0");
+          if (data.preferences.deepPreferPro !== undefined) safeSetItem(UL_DEEP_PREFER_PRO_KEY, data.preferences.deepPreferPro ? "1" : "0");
           loadAiPreferencesUI();
+          loadTrophyAiPrefsUI();
           syncVisitGapSelectors();
         }
         if (Array.isArray(data.inbox) && data.inbox.length > 0) {
@@ -9526,7 +9575,7 @@
       const visits = await idbGetAll("visits").catch(() => []);
       const finishedItemIds = new Set();
       visits.forEach(v => {
-        if (v.reviewState === "CONFIRMED" || v.reviewState === "SENT" || (v.reviewState === "TRASHED" && v.manualEdited)) {
+        if (v.reviewState === "CONFIRMED" || v.reviewState === "SENT" || v.reviewState === "DISMISSED" || (v.reviewState === "TRASHED" && v.manualEdited)) {
           (v.itemIds || []).forEach(id => finishedItemIds.add(id));
         }
       });
@@ -9536,7 +9585,7 @@
         return;
       }
 
-      if (!confirm(`Große 1024-px-Arbeitsbilder von ${finishedItemIds.size} fertigen Aufnahmen wirklich entfernen? (Die kleinen Vorschauen bleiben erhalten, aber die hochauflösende Restlicht-Lupe steht für diese Besuche danach nicht mehr zur Verfügung.)`)) {
+      if (!confirm(`Große 1440-px-Arbeitsbilder von ${finishedItemIds.size} fertigen Aufnahmen wirklich entfernen? (Die kleinen Vorschauen bleiben erhalten, aber die hochauflösende Restlicht-Lupe steht für diese Besuche danach nicht mehr zur Verfügung.)`)) {
         return;
       }
 

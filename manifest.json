@@ -1,0 +1,55 @@
+{
+  "id": "./",
+  "name": "Überläufer – KI-Auswerter",
+  "short_name": "Überläufer",
+  "description": "24h Jagd- & Wildauswertung für SD-Wildkameras mit Trophäen-Tiefenprüfung",
+  "start_url": "./",
+  "scope": "./",
+  "display": "standalone",
+  "display_override": [
+    "standalone",
+    "minimal-ui"
+  ],
+  "orientation": "portrait",
+  "background_color": "#0b130e",
+  "theme_color": "#0b130e",
+  "icons": [
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "./icon-512.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "maskable"
+    }
+  ],
+  "share_target": {
+    "action": "./?share-target=1",
+    "method": "POST",
+    "enctype": "multipart/form-data",
+    "params": {
+      "title": "title",
+      "text": "text",
+      "files": [
+        {
+          "name": "media",
+          "accept": [
+            "image/*",
+            "video/*",
+            ".jpg",
+            ".jpeg",
+            ".png",
+            ".webp",
+            ".mp4",
+            ".mov",
+            ".avi"
+          ]
+        }
+      ]
+    }
+  }
+}

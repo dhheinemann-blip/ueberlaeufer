@@ -8,10 +8,10 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
   <meta name="apple-mobile-web-app-title" content="Überläufer">
-  <link id="dynamic-favicon" rel="icon" type="image/png">
-  <link id="dynamic-touch-icon" rel="apple-touch-icon">
-  <link id="dynamic-manifest" rel="manifest">
-  <title>Überläufer v0.5.6 – SD-Kamera KI-Auswerter</title>
+  <link id="dynamic-favicon" rel="icon" type="image/png" href="./icon-512.png">
+  <link id="dynamic-touch-icon" rel="apple-touch-icon" href="./icon-512.png">
+  <link id="app-manifest" rel="manifest" href="./manifest.json">
+  <title>Überläufer v0.6.0 – KI-Auswerter (24h Jagd- &amp; Wildauswertung)</title>
   <style>
     :root {
       --bg-main: #0b130e;
@@ -1460,6 +1460,56 @@
       padding: 10px;
       margin-bottom: 10px;
     }
+    .import-result-box {
+      margin-top: 10px;
+      background: rgba(11, 19, 14, 0.78);
+      border: 1.5px solid #43875d;
+      border-radius: 13px;
+      padding: 10px 11px;
+      font-size: 0.76rem;
+      line-height: 1.45;
+      display: none;
+    }
+    .import-result-box.has-err {
+      border-color: var(--accent-red);
+      background: rgba(48, 15, 20, 0.85);
+    }
+    .import-result-box.has-warn {
+      border-color: var(--accent-yellow);
+    }
+    .trophy-deep-box {
+      background: linear-gradient(135deg, rgba(244, 196, 48, 0.16), rgba(20, 39, 28, 0.88));
+      border: 1.5px solid rgba(244, 196, 48, 0.65);
+      border-radius: 10px;
+      padding: 7px 9px;
+      font-size: 0.72rem;
+      line-height: 1.42;
+      color: #fff4c2;
+    }
+    .trophy-conf-sicher {
+      background: rgba(34, 230, 107, 0.22);
+      color: #8dfab6;
+      border: 1px solid rgba(34, 230, 107, 0.65);
+    }
+    .trophy-conf-teilweise {
+      background: rgba(244, 196, 48, 0.22);
+      color: #ffe899;
+      border: 1px solid rgba(244, 196, 48, 0.7);
+    }
+    .trophy-conf-unklar {
+      background: rgba(230, 57, 70, 0.24);
+      color: #ffb0be;
+      border: 1px solid rgba(230, 57, 70, 0.7);
+    }
+    .btn-deep-trophy {
+      background: linear-gradient(180deg, #f7d259 0%, #d4a017 100%);
+      color: #1c1300;
+      border: 1px solid #ffeb99;
+    }
+    .btn-deep-trophy:disabled {
+      opacity: 0.55;
+      pointer-events: none;
+    }
   </style>
 </head>
 <body class="home-mode">
@@ -1479,7 +1529,7 @@
 
     <div id="home-logo-wrap" onclick="switchTab('import')" title="Zum SD-Stapel-Import"></div>
     <div class="home-brand-title">Überläufer</div>
-    <div class="home-brand-sub">SD-Kamera KI-Auswerter · v0.5.6</div>
+    <div class="home-brand-sub">24h Jagd- &amp; Wildauswertung · v0.6.0</div>
 
     <div class="home-status-pill" onclick="switchTab('kameras')" id="home-status-pill">
       <span class="status-dot" id="home-sm-dot"></span>
@@ -1497,7 +1547,7 @@
   <header class="app-header">
     <div class="header-left">
       <div class="header-top-row">
-        <span class="header-title-pill">🐗 Überläufer <span style="font-size:0.68rem; color:var(--accent-green);">v0.5.6</span></span>
+        <span class="header-title-pill">🐗 Überläufer <span style="font-size:0.68rem; color:var(--accent-green);">v0.6.0</span></span>
         <button type="button" class="icon-pill-btn" id="btn-night-dim" onclick="toggleNightDim()" title="Nacht-Dimmung">🌙</button>
         <span class="status-badge" id="header-db-badge">
           <span class="status-dot" id="header-db-dot"></span>
@@ -1523,10 +1573,10 @@
       <div class="tile-green">
         <div class="tile-title-row">
           <span class="tile-title">📥 SD-Stapel importieren</span>
-          <span class="pill pill-green">1024 px · Dubletten-Schutz</span>
+          <span class="pill pill-green">1280 px · .JPG / .MP4 / .AVI</span>
         </div>
         <p class="tile-sub" style="margin-bottom:11px;">
-          Wähle Kamera &amp; Standort und lade deine wöchentlichen <strong>.JPG</strong>-Fotos oder konvertierten <strong>.MP4</strong>-Clips. Alle Bilder werden lokal verkleinert, gegen Dubletten geprüft und sicher in <code>IndexedDB</code> gespeichert.
+          Wähle Kamera &amp; Standort und lade deine <strong>.JPG</strong>-Fotos, <strong>.MP4</strong>-Clips oder direkt <strong>.AVI</strong>-Wildkamera-Videos (integrierter MJPEG-Extraktor – kein Umwandeln nötig). Bilder aus der Samsung-Galerie kannst du auch direkt über <strong>Teilen → Überläufer</strong> herüberschicken.
         </p>
 
         <div class="form-row">
@@ -1553,18 +1603,27 @@
           </div>
         </div>
 
-        <input type="file" id="batch-file-input" multiple accept="image/*,video/*,.jpg,.jpeg,.mp4,.mov" style="display:none;" onchange="handleBatchImportFiles(event)">
+        <input type="file" id="batch-file-input" multiple accept="image/*,video/*,.jpg,.jpeg,.png,.webp,.mp4,.mov,.avi" style="display:none;" onchange="handleBatchImportFiles(event)">
         <input type="file" id="batch-folder-input" multiple style="display:none;" onchange="handleBatchImportFiles(event)">
+        <input type="file" id="batch-dir-input" webkitdirectory directory multiple style="display:none;" onchange="handleBatchImportFiles(event)">
 
         <button type="button" class="btn-hero" id="btn-start-batch-import" onclick="triggerBatchFilePicker('media')">
-          📂 SD-Stapel auswählen &amp; vorbereiten (.JPG / .MP4)
+          📂 Fotos &amp; Videos wählen (.JPG / .MP4 / .AVI)
         </button>
-        <button type="button" class="btn-sm btn-no" id="btn-start-folder-import" style="width:100%; margin-top:8px; padding:11px 12px; font-size:0.84rem; border-color:var(--tile-green-border);" onclick="triggerBatchFilePicker('filemanager')">
-          📁 Aus Dateimanager / Ordner wählen (300+ Dateien)
-        </button>
-        <div style="font-size:0.69rem; color:var(--text-muted); margin-top:5px; line-height:1.35;">
-          Tipp für große SD-Ordner: Der Dateimanager-Button umgeht das Android-Fotoauswahl-Limit (100 Dateien) und bietet „Alle auswählen“. Nicht-Medien-Dateien werden automatisch übersprungen.
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px;">
+          <button type="button" class="btn-sm btn-no" id="btn-start-dir-import" style="padding:10px 8px; font-size:0.78rem; border-color:var(--accent-green);" onclick="triggerBatchFilePicker('directory')">
+            🗂️ Ganzen Ordner laden
+          </button>
+          <button type="button" class="btn-sm btn-no" id="btn-start-folder-import" style="padding:10px 8px; font-size:0.78rem; border-color:var(--tile-green-border);" onclick="triggerBatchFilePicker('filemanager')">
+            📁 Dateimanager (300+)
+          </button>
         </div>
+        <div style="font-size:0.69rem; color:var(--text-muted); margin-top:5px; line-height:1.35;">
+          <strong>Tipps am Galaxy A55:</strong> „Ganzen Ordner laden“ zieht komplette Unterordner (z. B. <em>Rotwild Hirsche</em> inkl. <code>.AVI</code>) in einem Rutsch. Oder direkt in der <strong>Samsung-Galerie → Alle auswählen → Teilen → Überläufer</strong>.
+        </div>
+
+        <!-- Sichtbare Import-Zusammenfassung / Fehler-Box (verschwindet nicht wortlos) -->
+        <div class="import-result-box" id="import-result-box"></div>
 
         <!-- Live-Fortschritt beim sequenziellen Verarbeiten -->
         <div class="progress-wrap" id="import-progress-wrap">
@@ -1826,7 +1885,7 @@
           <span class="pill pill-blue" id="ul-spots-badge">0 angelegt</span>
         </div>
         <p class="tile-sub" style="color:#e6f2d0; margin-bottom:10px;">
-          Für Plätze ohne eigenen Hochsitz (z. B. <em>Malbaum hinterm Tunnel</em>, <em>Wechsel Bahndamm</em>). Optional mit Ziel-Kanzel für die Durchreiche.
+          Für freie Kamerapunkte ohne eigenen Hochsitz (z. B. <em>Malbaum am Tunnel</em>, <em>Wechsel am Wildacker</em>, <em>Forstecke</em>). Werden automatisch unter <code>sm_spots_v1</code> mit der Sauenmatrix geteilt – streng getrennt von deinen Hochsitzen (<code>sm_kanzeln_v1</code>) und der Sauen-Prognose.
         </p>
 
         <div style="display:flex; flex-direction:column; gap:8px; margin-bottom:12px;">
@@ -1837,7 +1896,7 @@
           <div>
             <label class="app-label" style="color:#e6f2d0;">Ziel-Zuordnung für Sauenmatrix (optional)</label>
             <select id="new-ul-spot-map" class="app-select">
-              <option value="">— Nur im Überläufer (kein Sauenmatrix-Transfer) —</option>
+              <option value="">— Als eigener freier Kamerapunkt (ohne Hochsitz-Zuordnung) —</option>
             </select>
           </div>
           <button type="button" class="btn-sm btn-yes" style="padding:10px;" onclick="addExtraCameraSpot()">+ Kamera-Platz speichern</button>
@@ -1923,6 +1982,11 @@
               🔗 Benachbarte SW-Besuche verschmelzen
             </button>
           </div>
+          <div id="ueb-sw-dup-dismiss-bar" style="display:none;">
+            <button type="button" class="btn-sm btn-no" style="width:100%; padding:8px; border-color:rgba(244,196,48,0.65); color:#ffe899;" onclick="dismissAllDuplicateUebergabe('sw')">
+              🧹 Alle „Evtl. schon in SMX“ (SW) ausblenden
+            </button>
+          </div>
         </div>
 
         <button type="button" class="ueb-collapse-btn" id="ueb-ready-toggle-btn" style="display:none;" onclick="toggleUebergabeListCollapse('sw')">
@@ -1953,6 +2017,11 @@
               <button type="button" class="btn-sm btn-no" style="padding:4px 8px; font-size:0.7rem;" onclick="toggleAllUebergabeChecks('bycatch', true)">Alle</button>
               <button type="button" class="btn-sm btn-no" style="padding:4px 8px; font-size:0.7rem;" onclick="toggleAllUebergabeChecks('bycatch', false)">Keine</button>
             </div>
+          </div>
+          <div id="ueb-bycatch-dup-dismiss-bar" style="display:none;">
+            <button type="button" class="btn-sm btn-no" style="width:100%; padding:8px; border-color:rgba(244,196,48,0.65); color:#ffe899;" onclick="dismissAllDuplicateUebergabe('bycatch')">
+              🧹 Alle „Evtl. schon in SMX“ (Beifang) ausblenden
+            </button>
           </div>
         </div>
 
@@ -2127,6 +2196,17 @@
               <option value="30">30 Minuten Lücke</option>
             </select>
           </div>
+          <div style="margin-top:10px; padding-top:9px; border-top:1px solid rgba(135,156,73,0.4);">
+            <div style="font-size:0.77rem; font-weight:900; color:#fff0a8; margin-bottom:6px;">🏆 Stufe 2: Trophäen-Tiefenprüfung (Free-Tier Maximum)</div>
+            <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.75rem; color:#e6f2d0; cursor:pointer; margin-bottom:7px; line-height:1.35;">
+              <input type="checkbox" id="setup-auto-deep-trophy" checked style="width:17px; height:17px; margin-top:2px; accent-color:var(--accent-yellow);" onchange="saveTrophyAiPrefs()">
+              <span>Erkannte Trophäenträger (Rothirsch, Damhirsch, Rehbock, Keiler) nach dem Stapel-Durchlauf automatisch einzeln mit bis zu 3 Bildern tiefenprüfen</span>
+            </label>
+            <label style="display:flex; align-items:flex-start; gap:8px; font-size:0.75rem; color:#e6f2d0; cursor:pointer; line-height:1.35;">
+              <input type="checkbox" id="setup-deep-prefer-pro" checked style="width:17px; height:17px; margin-top:2px; accent-color:var(--accent-yellow);" onchange="saveTrophyAiPrefs()">
+              <span>Stärkstes Gratis-Modell (Pro / Thinking) für Trophäen-Tiefenprüfung bevorzugen (automatischer Fallback auf Flash bei Limit)</span>
+            </label>
+          </div>
         </div>
       </div>
 
@@ -2156,7 +2236,7 @@
         <input type="file" id="logo-file-input" accept="image/*" style="display:none;" onchange="handleLogoFileSelect(event)">
         <div style="display:flex; gap:8px;">
           <button type="button" class="btn-sm btn-yes" style="flex:1; padding:10px;" onclick="document.getElementById('logo-file-input').click()">🖼️ Überläufer-Logo wählen</button>
-          <button type="button" class="btn-sm btn-no" onclick="resetCustomLogo()">↺ Standard</button>
+          <button type="button" class="btn-sm btn-no" onclick="resetCustomLogo()">↺ Original (v0.6.0)</button>
         </div>
       </div>
 
@@ -2164,7 +2244,7 @@
       <div class="tile-dark">
         <div class="tile-title-row" style="margin-bottom:6px;">
           <span class="tile-title" style="font-size:0.88rem;">🛠️ System &amp; Version</span>
-          <span class="pill pill-green">Überläufer v0.5.6</span>
+          <span class="pill pill-green">Überläufer v0.6.0</span>
         </div>
         <div class="tile-sub" id="setup-system-info">
           IndexedDB: prüfe…
@@ -2527,17 +2607,23 @@
         </div>
       </div>
 
-      <!-- Trophäenträger-Panel (Rehbock, Damhirsch, Rothirsch, Keiler + sm_trophaeen_v1) -->
+      <!-- Trophäenträger-Panel (v0.6.0: Klassen IIIb–Ia, Enden/Krone, Bast/Verfegt, Damwild-Farbschlag & Stufe-2 Tiefenprüfung) -->
       <div id="ev-trophy-panel" class="ev-trophy-box">
-        <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; font-weight:900; color:#fff0a8; cursor:pointer;">
-          <input type="checkbox" id="ev-is-trophy" style="width:18px; height:18px; accent-color:var(--accent-yellow);" onchange="onEditTrophyToggle()">
-          🏆 Trophäenträger (Rehbock / Hirsch / Keiler)
-        </label>
+        <div style="display:flex; justify-content:space-between; align-items:center; gap:6px; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:8px; font-size:0.82rem; font-weight:900; color:#fff0a8; cursor:pointer;">
+            <input type="checkbox" id="ev-is-trophy" style="width:18px; height:18px; accent-color:var(--accent-yellow);" onchange="onEditTrophyToggle()">
+            🏆 Trophäenträger (Rehbock / Hirsch / Keiler)
+          </label>
+          <button type="button" class="btn-sm btn-deep-trophy" id="btn-ev-deep-trophy" style="padding:5px 9px; font-size:0.71rem;" onclick="runDeepTrophyFromEditModal()">
+            🔬 Tiefenprüfung
+          </button>
+        </div>
+        <div id="ev-trophy-deep-summary" style="display:none; margin-top:7px;" class="trophy-deep-box"></div>
         <div id="ev-trophy-fields" style="display:none; margin-top:9px;">
           <div class="form-grid-2 form-row">
             <div>
               <label class="app-label" for="ev-trophy-type" style="font-size:0.7rem;">Trophäen-Art</label>
-              <select id="ev-trophy-type" class="app-select" style="padding:7px 9px; font-size:0.8rem;" onchange="populateTrophySelect(document.getElementById('ev-trophy-select')?.value || '')">
+              <select id="ev-trophy-type" class="app-select" style="padding:7px 9px; font-size:0.8rem;" onchange="onEditTrophyTypeChange()">
                 <option value="">— Bitte wählen —</option>
                 <option value="REHBOCK">🦌 Rehbock</option>
                 <option value="DAMHIRSCH">🦌 Damhirsch</option>
@@ -2546,10 +2632,60 @@
               </select>
             </div>
             <div>
-              <label class="app-label" for="ev-trophy-detail" style="font-size:0.7rem;">Merkmale (Geweih / Waffen)</label>
-              <input type="text" id="ev-trophy-detail" class="app-input" style="padding:7px 9px; font-size:0.8rem;" placeholder="z. B. Ungerader 6er, Waffen &amp; Klötze">
+              <label class="app-label" for="ev-trophy-class" style="font-size:0.7rem;">Alters-/Güteklasse</label>
+              <select id="ev-trophy-class" class="app-select" style="padding:7px 9px; font-size:0.8rem;"></select>
             </div>
           </div>
+
+          <div class="form-grid-2 form-row">
+            <div>
+              <label class="app-label" for="ev-trophy-form-preset" style="font-size:0.7rem;">Trophäenform (Schnellwahl)</label>
+              <select id="ev-trophy-form-preset" class="app-select" style="padding:7px 9px; font-size:0.78rem;" onchange="applyTrophyFormPreset(this.value)"></select>
+            </div>
+            <div>
+              <label class="app-label" for="ev-trophy-status" style="font-size:0.7rem;">Geweih-/Gehörnstatus</label>
+              <select id="ev-trophy-status" class="app-select" style="padding:7px 9px; font-size:0.8rem;">
+                <option value="">— Unbekannt / k. A. —</option>
+                <option value="VERFEGT">Verfegt</option>
+                <option value="BAST">Im Bast</option>
+                <option value="ABGEWORFEN">Abgeworfen</option>
+                <option value="UNKLAR">Unklar (Nacht/IR)</option>
+              </select>
+            </div>
+          </div>
+
+          <div id="ev-trophy-coat-row" class="form-row" style="display:none;">
+            <label class="app-label" for="ev-trophy-coat" style="font-size:0.7rem;">Damwild-Farbschlag (Wiedererkennung)</label>
+            <select id="ev-trophy-coat" class="app-select" style="padding:7px 9px; font-size:0.8rem;">
+              <option value="">— Nicht angegeben —</option>
+              <option value="Normal/Rotbraun">Normal / Rotbraun</option>
+              <option value="Schwarz">Schwarz</option>
+              <option value="Weiß">Weiß</option>
+              <option value="Menil">Menil / Porzellan</option>
+            </select>
+          </div>
+
+          <div class="form-row">
+            <label class="app-label" for="ev-trophy-detail" style="font-size:0.7rem;">Enden / Krone / Merkmale (Geweih, Schaufeln, Waffen)</label>
+            <input type="text" id="ev-trophy-detail" class="app-input" style="padding:7px 9px; font-size:0.8rem;" placeholder="z. B. Ungerader Zwölfender · beids. Krone · linke Stange abgebrochen">
+          </div>
+
+          <div class="form-grid-2 form-row">
+            <div>
+              <label class="app-label" for="ev-trophy-age" style="font-size:0.7rem;">Altersschätzung (Körperbau)</label>
+              <input type="text" id="ev-trophy-age" class="app-input" style="padding:7px 9px; font-size:0.8rem;" placeholder="z. B. ca. 5–7 Jahre (mittelalt)">
+            </div>
+            <div>
+              <label class="app-label" for="ev-trophy-confidence" style="font-size:0.7rem;">Sichtbarkeits-Ampel</label>
+              <select id="ev-trophy-confidence" class="app-select" style="padding:7px 9px; font-size:0.8rem;">
+                <option value="">— Offen —</option>
+                <option value="SICHER">🟢 Sicher ansprechbar</option>
+                <option value="TEILWEISE">🟡 Teilweise sichtbar</option>
+                <option value="UNKLAR">🔴 Nicht sicher zählbar</option>
+              </select>
+            </div>
+          </div>
+
           <div>
             <label class="app-label" for="ev-trophy-select" style="font-size:0.7rem;">Trophäen-Steckbrief aus Sauenmatrix (<code>sm_trophaeen_v1</code>, optional)</label>
             <select id="ev-trophy-select" class="app-select" style="padding:7px 9px; font-size:0.8rem;">
@@ -2774,131 +2910,118 @@
     // =========================================================================
     // 3. STANDARD-SVG-LOGO & EIGENES LOGO MIT AUTOM. RAND-FREISTELLUNG
     // =========================================================================
-    const DEFAULT_SVG_LOGO = `
-      <svg viewBox="0 0 260 220" xmlns="http://www.w3.org/2000/svg" aria-label="Überläufer Logo">
-        <defs>
-          <filter id="ulShadow" x="-10%" y="-10%" width="120%" height="120%">
-            <feDropShadow dx="0" dy="3" stdDeviation="3" flood-color="#000" flood-opacity="0.65"/>
-          </filter>
-        </defs>
-        <g filter="url(#ulShadow)">
-          <circle cx="145" cy="105" r="76" fill="none" stroke="#6f843a" stroke-width="11" stroke-dasharray="395 65" stroke-linecap="round"/>
-          <circle cx="145" cy="105" r="65" fill="none" stroke="#879c49" stroke-width="3.5" stroke-dasharray="280 95" stroke-linecap="round" opacity="0.85"/>
-          <path d="M188 124 C194 94 185 68 164 56 C151 49 135 52 123 63 C112 72 104 82 91 88 C81 93 74 96 76 105 C78 114 91 118 103 117 C115 123 130 128 150 128 C166 128 180 127 188 124 Z" fill="#080c09" stroke="#223629" stroke-width="2"/>
-          <path d="M158 58 L175 45 L171 67 Z" fill="#080c09" stroke="#d9eadc" stroke-width="2.5" stroke-linejoin="round"/>
-          <path d="M101 114 C94 106 94 97 99 91 C99 101 104 108 113 112 Z" fill="#eaf5ec"/>
-          <circle cx="129" cy="83" r="4.2" fill="#eaf5ec"/>
-          <circle cx="128.2" cy="83" r="2" fill="#080c09"/>
-          <path d="M161 78 C173 90 175 109 167 122" fill="none" stroke="#eaf5ec" stroke-width="3.2" stroke-linecap="round"/>
-          <text x="16" y="156" font-family="Georgia, 'Times New Roman', serif" font-weight="900" font-size="44" fill="#080c09" stroke="#c8f2b8" stroke-width="5" paint-order="stroke">Ü</text>
-          <text x="58" y="152" font-family="Georgia, 'Times New Roman', serif" font-weight="900" font-size="31" fill="#080c09" stroke="#c8f2b8" stroke-width="4.5" paint-order="stroke">berläufer</text>
-        </g>
-      </svg>
-    `;
-
+    const DEFAULT_ORIGINAL_LOGO_DATA_URL = "data:image/webp;base64,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";
     let __pendingLogoRawImage = null;
-    let __defaultPngIconCache = null;
-
-    function buildDefaultSvgDataUrl() {
-      return "data:image/svg+xml;charset=utf-8," + encodeURIComponent(DEFAULT_SVG_LOGO.trim());
-    }
-
-    function buildDefaultPngDataUrl() {
-      if (__defaultPngIconCache) return Promise.resolve(__defaultPngIconCache);
-      return new Promise((resolve) => {
-        try {
-          const img = new Image();
-          img.onload = () => {
-            try {
-              const c = document.createElement("canvas");
-              c.width = 512;
-              c.height = 512;
-              const ctx = c.getContext("2d");
-              ctx.fillStyle = "#0b130e";
-              ctx.fillRect(0, 0, 512, 512);
-              const pad = 34;
-              const ratio = Math.min((512 - pad * 2) / (img.width || 260), (512 - pad * 2) / (img.height || 220));
-              const dw = Math.round((img.width || 260) * ratio);
-              const dh = Math.round((img.height || 220) * ratio);
-              ctx.drawImage(img, Math.round((512 - dw) / 2), Math.round((512 - dh) / 2), dw, dh);
-              __defaultPngIconCache = c.toDataURL("image/png");
-              resolve(__defaultPngIconCache);
-            } catch (e) {
-              resolve(buildDefaultSvgDataUrl());
-            }
-          };
-          img.onerror = () => resolve(buildDefaultSvgDataUrl());
-          img.src = buildDefaultSvgDataUrl();
-        } catch (e) {
-          resolve(buildDefaultSvgDataUrl());
-        }
-      });
-    }
 
     function updatePwaManifestWithIcon(iconUrl, isPng) {
+      // Wichtig (v0.6.0): <link id="app-manifest" rel="manifest" href="./manifest.json"> NIEMALS
+      // mit einem data:- oder blob:-Manifest überschreiben, damit Chrome Android eine echte
+      // Vollbild-PWA (ohne Adressleiste und ohne Chrome-Badge auf der Kachel) installiert!
       const fav = document.getElementById("dynamic-favicon");
       const touch = document.getElementById("dynamic-touch-icon");
-      const manif = document.getElementById("dynamic-manifest");
-      if (fav) fav.href = iconUrl;
-      if (touch) touch.href = iconUrl;
-      if (!manif) return;
-
-      const hasHttpOrigin = window.location.origin && window.location.origin !== "null" && /^https?:/i.test(window.location.protocol);
-      const scopeUrl = hasHttpOrigin
-        ? (window.location.origin + window.location.pathname.replace(/[^/]*$/, ""))
-        : ".";
-      const startUrl = hasHttpOrigin
-        ? (window.location.origin + window.location.pathname)
-        : ".";
-      const iconType = isPng ? "image/png" : "image/svg+xml";
-
-      const manifestObj = {
-        id: scopeUrl,
-        name: "Überläufer – SD-Kamera Auswerter",
-        short_name: "Überläufer",
-        start_url: startUrl,
-        scope: scopeUrl,
-        display: "standalone",
-        display_override: ["standalone", "minimal-ui"],
-        orientation: "portrait",
-        background_color: "#0b130e",
-        theme_color: "#0b130e",
-        icons: isPng
-          ? [
-              { src: iconUrl, sizes: "192x192", type: "image/png", purpose: "any" },
-              { src: iconUrl, sizes: "512x512", type: "image/png", purpose: "any maskable" }
-            ]
-          : [{ src: iconUrl, sizes: "512x512", type: iconType }]
-      };
-      manif.href = "data:application/manifest+json;charset=utf-8," + encodeURIComponent(JSON.stringify(manifestObj));
+      if (iconUrl) {
+        if (fav) fav.href = iconUrl;
+        if (touch) touch.href = iconUrl;
+      } else {
+        if (fav) fav.href = "./icon-512.png";
+        if (touch) touch.href = "./icon-512.png";
+      }
     }
 
     function applyLogoEverywhere(dataUrl = null) {
-      const html = dataUrl
-        ? `<img src="${dataUrl}" alt="Überläufer Logo">`
-        : DEFAULT_SVG_LOGO;
+      const imgSrc = dataUrl || DEFAULT_ORIGINAL_LOGO_DATA_URL;
+      const htmlStr = `<img src="${imgSrc}" alt="Überläufer – 24h Jagd- &amp; Wildauswertung">`;
 
       ["home-logo-wrap", "header-logo-container", "setup-logo-preview"].forEach(id => {
         const el = document.getElementById(id);
-        if (el) el.innerHTML = html;
+        if (el) el.innerHTML = htmlStr;
       });
       const homeWrap = document.getElementById("home-logo-wrap");
       if (homeWrap) homeWrap.classList.add("logo-ready");
 
       const pill = document.getElementById("logo-mode-pill");
       if (pill) {
-        pill.textContent = dataUrl ? "Eigenes Logo" : "Standard";
-        pill.className = dataUrl ? "pill pill-green" : "pill pill-blue";
+        pill.textContent = dataUrl ? "Eigenes Logo" : "Original (v0.6.0)";
+        pill.className = dataUrl ? "pill pill-blue" : "pill pill-green";
       }
 
-      if (dataUrl && dataUrl.startsWith("data:image/png")) {
-        updatePwaManifestWithIcon(dataUrl, true);
-      } else if (dataUrl) {
-        updatePwaManifestWithIcon(dataUrl, true);
-      } else {
-        buildDefaultPngDataUrl().then(pngUrl => {
-          updatePwaManifestWithIcon(pngUrl, pngUrl.startsWith("data:image/png"));
+      updatePwaManifestWithIcon(dataUrl || null, true);
+    }
+
+    // Registriert ./sw.js sauber unter eigenem App-Scope (Network-First + Samsung-Galerie Teilen)
+    async function registerUeberlaeuferServiceWorker() {
+      if (!("serviceWorker" in navigator)) return;
+      const isSecure = window.location.protocol === "https:" || window.location.hostname === "localhost" || window.location.hostname === "127.0.0.1";
+      if (!isSecure) return;
+      try {
+        await navigator.serviceWorker.register("./sw.js", { scope: "./" });
+      } catch (e) {}
+    }
+
+    // Liest Dateien aus, die aus der Samsung-Galerie über „Teilen → Überläufer“ eingegangen sind
+    async function consumeSharedGalleryFiles() {
+      if (!window.indexedDB) return;
+      const hasSharedParam = new URLSearchParams(window.location.search).has("shared");
+      let db = null;
+      try {
+        db = await new Promise((resolve, reject) => {
+          const req = indexedDB.open("UeberlaeuferShareDB", 1);
+          req.onupgradeneeded = () => {
+            const d = req.result;
+            if (!d.objectStoreNames.contains("shared_media")) {
+              d.createObjectStore("shared_media", { keyPath: "id" });
+            }
+          };
+          req.onsuccess = () => resolve(req.result);
+          req.onerror = () => reject(req.error);
         });
+        const records = await new Promise((resolve, reject) => {
+          const tx = db.transaction("shared_media", "readonly");
+          const req = tx.objectStore("shared_media").getAll();
+          req.onsuccess = () => resolve(req.result || []);
+          req.onerror = () => reject(req.error);
+        });
+        if (records.length === 0) {
+          if (hasSharedParam) {
+            try { history.replaceState({ tab: currentTab }, "", window.location.pathname); } catch (e) {}
+          }
+          return;
+        }
+
+        // Sofort leeren, damit doppelter Import beim Neuladen ausgeschlossen ist
+        await new Promise((resolve) => {
+          const tx = db.transaction("shared_media", "readwrite");
+          tx.objectStore("shared_media").clear();
+          tx.oncomplete = () => resolve(true);
+          tx.onerror = () => resolve(false);
+        });
+        if (hasSharedParam) {
+          try { history.replaceState({ tab: "import" }, "", window.location.pathname); } catch (e) {}
+        }
+
+        const files = records
+          .filter(r => r && r.blob)
+          .map(r => {
+            try {
+              return new File([r.blob], r.name || "galerie.jpg", {
+                type: r.type || r.blob.type || "image/jpeg",
+                lastModified: r.lastModified || Date.now()
+              });
+            } catch (e) {
+              r.blob.name = r.name || "galerie.jpg";
+              r.blob.lastModified = r.lastModified || Date.now();
+              return r.blob;
+            }
+          });
+
+        if (files.length > 0) {
+          switchTab("import");
+          showToast(`📲 ${files.length} Datei(en) aus Galerie empfangen – importiere…`);
+          await processBatchFileArray(files);
+        }
+      } catch (e) {
+      } finally {
+        try { if (db) db.close(); } catch (e) {}
       }
     }
 
@@ -3042,7 +3165,7 @@
       __pendingLogoRawImage = null;
       applyLogoEverywhere(null);
       try { await idbDelete("meta", "customLogo"); } catch (e) {}
-      showToast("↺ Auf Standard-Logo zurückgesetzt");
+      showToast("↺ Auf Original-Logo (24h Jagd- & Wildauswertung) zurückgesetzt");
     }
 
     // =========================================================================
@@ -3148,6 +3271,74 @@
     }
 
     const REVIER_ALLGEMEIN_SPOT_KEY = "ul:revier_allgemein";
+    const SM_SPOTS_STORAGE_KEY = "sm_spots_v1";
+
+    function readSharedSmSpots() {
+      const arr = safeGetJSON(SM_SPOTS_STORAGE_KEY, []);
+      if (!Array.isArray(arr)) return [];
+      return arr.filter(x => x && typeof x === "object" && String(x.name || "").trim());
+    }
+
+    async function syncSharedCameraSpots() {
+      const idbSpots = await idbGetAll("spots").catch(() => []);
+      const lsSpots = readSharedSmSpots();
+      const byNameNorm = new Map();
+
+      // Bestehende Überläufer-Plätze zuerst aufnehmen
+      idbSpots.forEach(sp => {
+        const cleanName = String(sp.name || "").trim();
+        if (!cleanName) return;
+        byNameNorm.set(cleanName.toLowerCase(), {
+          id: sp.id || ("spot_" + Date.now()),
+          name: cleanName,
+          mappedKanzel: String(sp.mappedKanzel || "").trim(),
+          source: sp.source || "UEBERLAEUFER",
+          createdAt: sp.createdAt || Date.now(),
+          updatedAt: sp.updatedAt || sp.createdAt || Date.now()
+        });
+      });
+
+      // Plätze aus Sauenmatrix (sm_spots_v1) mit einziehen, falls im Überläufer noch nicht vorhanden
+      let idbChanged = false;
+      for (const ls of lsSpots) {
+        const cleanName = String(ls.name || "").trim();
+        if (!cleanName) continue;
+        const norm = cleanName.toLowerCase();
+        if (!byNameNorm.has(norm)) {
+          const imported = {
+            id: ls.id || ("spot_smx_" + Date.now() + "_" + Math.random().toString(36).slice(2, 5)),
+            name: cleanName,
+            mappedKanzel: String(ls.mappedKanzel || "").trim(),
+            source: ls.source || "SAUENMATRIX",
+            createdAt: ls.createdAt || Date.now(),
+            updatedAt: ls.updatedAt || Date.now()
+          };
+          byNameNorm.set(norm, imported);
+          await idbPut("spots", imported).catch(() => {});
+          idbChanged = true;
+        }
+      }
+
+      const mergedList = Array.from(byNameNorm.values()).sort((a, b) => a.name.localeCompare(b.name, "de"));
+      safeSetItem(SM_SPOTS_STORAGE_KEY, JSON.stringify(mergedList));
+      return mergedList;
+    }
+
+    async function pushCurrentSpotsToSharedStorage() {
+      const idbSpots = await idbGetAll("spots").catch(() => []);
+      const clean = idbSpots
+        .filter(sp => sp && String(sp.name || "").trim())
+        .map(sp => ({
+          id: sp.id,
+          name: String(sp.name).trim(),
+          mappedKanzel: String(sp.mappedKanzel || "").trim(),
+          source: sp.source || "UEBERLAEUFER",
+          createdAt: sp.createdAt || Date.now(),
+          updatedAt: Date.now()
+        }))
+        .sort((a, b) => a.name.localeCompare(b.name, "de"));
+      safeSetItem(SM_SPOTS_STORAGE_KEY, JSON.stringify(clean));
+    }
 
     function isFlexibleNoKanzelSpotKey(key) {
       const k = String(key || "");
@@ -3254,11 +3445,11 @@
         const spot = cam.currentSpotKey ? spotMap.get(cam.currentSpotKey) : null;
         const offsetMin = Number(cam.defaultOffsetMin || 0);
         const offsetTxt = offsetMin === 0 ? "0 Min." : `${offsetMin > 0 ? "+" : ""}${offsetMin} Min.`;
-        const stripLabel = { auto: "Auto", bottom: "Unten", top: "Oben", none: "Aus" }[cam.stripPosition || "auto"] || "Auto";
+        const stripLabel = { auto: "Auto", bottom: "Unten", top: "Oben", intro: "Video-Start-Tafel", none: "Aus" }[cam.stripPosition || "auto"] || "Auto";
 
         const spotOptions = [
           `<option value="">— Kein Standort (im Schrank / Wartung) —</option>`,
-          ...allSpots.map(s => `<option value="${escapeHTML(s.key)}" ${s.key === cam.currentSpotKey ? "selected" : ""}>${s.source === "SMX" ? (s.type === "FREIFLAECHE" ? "🦌 " : "🐗 ") : "📍 "}${escapeHTML(s.name)}</option>`)
+          ...allSpots.map(s => `<option value="${escapeHTML(s.key)}" ${s.key === cam.currentSpotKey ? "selected" : ""}>${s.source === "SMX" ? (s.type === "FREIFLAECHE" ? "🦌 " : "🐗 ") : (s.source === "BUILTIN" ? "🌲 " : "📍 ")}${escapeHTML(s.name)}</option>`)
         ].join("");
 
         return `
@@ -3414,7 +3605,7 @@
 
       if (mapSelect) {
         const prevVal = mapSelect.value;
-        mapSelect.innerHTML = `<option value="">— Nur im Überläufer (kein Sauenmatrix-Transfer) —</option>`;
+        mapSelect.innerHTML = `<option value="">— Als eigener freier Kamerapunkt (ohne Hochsitz-Zuordnung) —</option>`;
         smSpots.forEach(s => {
           const opt = document.createElement("option");
           opt.value = s.name;
@@ -3437,7 +3628,7 @@
               <div>
                 <div style="font-weight:800; font-size:0.86rem;">📍 ${escapeHTML(sp.name)}</div>
                 <div style="font-size:0.72rem; color:var(--text-muted); margin-top:2px;">
-                  ${sp.mappedKanzel ? `Durchreiche → ${escapeHTML(sp.mappedKanzel)}` : "Nur lokal im Überläufer"}
+                  ${sp.mappedKanzel ? `Durchreiche → ${escapeHTML(sp.mappedKanzel)}` : "Freier Kamerapunkt (sm_spots_v1 · direkt an Sauenmatrix)"}
                 </div>
               </div>
               <button type="button" class="btn-sm btn-danger" style="padding:5px 9px;" onclick="deleteExtraCameraSpot('${escapeHTML(sp.id)}')">🗑️</button>
@@ -3488,6 +3679,7 @@
         createdAt: Date.now()
       };
       await idbPut("spots", spot);
+      await pushCurrentSpotsToSharedStorage();
       if (nameEl) nameEl.value = "";
       await renderSpotsViews();
       await renderCamerasList();
@@ -3498,6 +3690,7 @@
     async function deleteExtraCameraSpot(id) {
       if (!confirm("Zusätzlichen Kamera-Platz wirklich löschen?")) return;
       await idbDelete("spots", id);
+      await pushCurrentSpotsToSharedStorage();
       await renderSpotsViews();
       await renderCamerasList();
       await refreshImportSelectors();
@@ -3603,7 +3796,9 @@
       if (spotKey) {
         safeSetItem("ul_last_spot_key_v1", spotKey);
       }
-      const targetId = mode === "filemanager" ? "batch-folder-input" : "batch-file-input";
+      const targetId = mode === "directory"
+        ? "batch-dir-input"
+        : (mode === "filemanager" ? "batch-folder-input" : "batch-file-input");
       document.getElementById(targetId)?.click();
     }
 
@@ -3776,7 +3971,7 @@
     }
 
     async function buildAiAndThumbBlobs(source, srcW, srcH) {
-      const maxAi = 1024;
+      const maxAi = 1280;
       const aiScale = Math.min(1, maxAi / Math.max(srcW, srcH));
       const aiW = Math.max(1, Math.round(srcW * aiScale));
       const aiH = Math.max(1, Math.round(srcH * aiScale));
@@ -3785,7 +3980,7 @@
       aiCanvas.width = aiW;
       aiCanvas.height = aiH;
       aiCanvas.getContext("2d").drawImage(source, 0, 0, aiW, aiH);
-      const aiBlob = await canvasToJpegBlob(aiCanvas, 0.78);
+      const aiBlob = await canvasToJpegBlob(aiCanvas, 0.82);
       aiCanvas.width = 0; aiCanvas.height = 0;
 
       const maxThumb = 320;
@@ -3882,10 +4077,256 @@
       }
     }
 
+    // =========================================================================
+    // v0.6.0: DIREKTER .AVI / MJPEG-EXTRAKTOR (OHNE BROWSER-VIDEO-PLAYER)
+    // Liest Wildkamera-.AVI-Clips (DÖRR, Seissiger, Secacam, Denver usw.) direkt
+    // im Arbeitsspeicher aus und extrahiert 3 scharfe Einzelbilder als JPEG.
+    // =========================================================================
+    function findJpegRangesInBuffer(u8, maxCount = 600) {
+      const ranges = [];
+      const len = u8.length;
+      let i = 0;
+      while (i < len - 4 && ranges.length < maxCount) {
+        // Suche JPEG Start-Of-Image (FF D8 FF)
+        if (u8[i] === 0xFF && u8[i + 1] === 0xD8 && u8[i + 2] === 0xFF) {
+          const start = i;
+          i += 3;
+          // Suche passendes End-Of-Image (FF D9)
+          let foundEnd = -1;
+          while (i < len - 1) {
+            if (u8[i] === 0xFF && u8[i + 1] === 0xD9) {
+              foundEnd = i + 2;
+              i = foundEnd;
+              break;
+            }
+            i++;
+          }
+          if (foundEnd > start + 1024) {
+            ranges.push([start, foundEnd]);
+          }
+        } else {
+          i++;
+        }
+      }
+      return ranges;
+    }
+
+    function parseAviMjpegChunks(arrayBuffer) {
+      const u8 = new Uint8Array(arrayBuffer);
+      const view = new DataView(arrayBuffer);
+      const len = u8.length;
+      let durationSec = 0;
+      let fps = 0;
+      let headerWidth = 0;
+      let headerHeight = 0;
+      const jpegChunks = [];
+
+      // Prüfe RIFF .... AVI Header
+      const isRiffAvi = len > 64 &&
+        u8[0] === 0x52 && u8[1] === 0x49 && u8[2] === 0x46 && u8[3] === 0x46 &&
+        u8[8] === 0x41 && u8[9] === 0x56 && u8[10] === 0x49 && u8[11] === 0x20;
+
+      if (isRiffAvi) {
+        const readFourCC = (off) => String.fromCharCode(u8[off], u8[off + 1], u8[off + 2], u8[off + 3]);
+
+        // 1. Suche avih-Chunk für FPS, Frame-Anzahl & Auflösung
+        for (let p = 12; p < Math.min(len - 48, 65536); p += 2) {
+          if (u8[p] === 0x61 && u8[p + 1] === 0x76 && u8[p + 2] === 0x69 && u8[p + 3] === 0x68) {
+            const sz = view.getUint32(p + 4, true);
+            if (sz >= 40 && p + 8 + 40 <= len) {
+              const microSecPerFrame = view.getUint32(p + 8, true);
+              const totalFrames = view.getUint32(p + 8 + 16, true);
+              headerWidth = view.getUint32(p + 8 + 32, true);
+              headerHeight = view.getUint32(p + 8 + 36, true);
+              if (microSecPerFrame > 0 && microSecPerFrame < 2000000) {
+                fps = 1000000 / microSecPerFrame;
+                if (totalFrames > 0) durationSec = (totalFrames * microSecPerFrame) / 1000000;
+              }
+            }
+            break;
+          }
+        }
+
+        // 2. RIFF-Chunks traversieren und Video-Frames (00dc / 00db / 01dc / 01db) mit JPEG-Header sammeln
+        const walkChunks = (startPos, endPos, depth = 0) => {
+          if (depth > 4) return;
+          let pos = startPos;
+          while (pos + 8 <= endPos) {
+            const cc = readFourCC(pos);
+            const sz = view.getUint32(pos + 4, true);
+            const dataStart = pos + 8;
+            const dataEnd = Math.min(endPos, dataStart + sz);
+            if (cc === "LIST" && sz >= 4 && dataStart + 4 <= endPos) {
+              walkChunks(dataStart + 4, dataEnd, depth + 1);
+            } else if (/^0[0-3]d[cb]$/i.test(cc) && sz > 1024) {
+              if (u8[dataStart] === 0xFF && u8[dataStart + 1] === 0xD8) {
+                jpegChunks.push([dataStart, dataEnd]);
+              }
+            }
+            const step = sz + (sz % 2);
+            if (step < 0 || dataStart + step <= pos) break;
+            pos = dataStart + step;
+          }
+        };
+        walkChunks(12, len, 0);
+      }
+
+      // Fallback: Direkter Byte-Scan nach JPEG SOI..EOI (fängt auch unübliche AVI-Header ab)
+      const finalRanges = jpegChunks.length > 0 ? jpegChunks : findJpegRangesInBuffer(u8, 600);
+      if (durationSec <= 0 && finalRanges.length > 0) {
+        durationSec = Math.max(1, finalRanges.length / (fps > 0 ? fps : 20));
+      }
+      return { u8, ranges: finalRanges, durationSec, fps: fps || 20, headerWidth, headerHeight, isRiffAvi };
+    }
+
+    async function decodeJpegSliceToImage(u8, start, end) {
+      const slice = u8.subarray(start, end);
+      const blob = new Blob([slice], { type: "image/jpeg" });
+      const url = URL.createObjectURL(blob);
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const im = new Image();
+          im.onload = () => resolve(im);
+          im.onerror = () => reject(new Error("MJPEG-Frame nicht dekodierbar"));
+          im.src = url;
+        });
+        return img;
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    async function extractFramesFromAviMjpeg(file) {
+      // Speicherschutz für sehr große AVI-Dateien (> 85 MB): 3 gezielte Abschnitte lesen
+      let framesInfo = [];
+      let durationSec = 0;
+      let width = 0;
+      let height = 0;
+
+      if (file.size <= 85 * 1024 * 1024) {
+        const buf = await file.arrayBuffer();
+        const parsed = parseAviMjpegChunks(buf);
+        if (parsed.ranges.length === 0) {
+          throw new Error("AVI enthält kein Motion-JPEG (evtl. H.264/DivX-Codec in AVI – bitte in MP4 umwandeln)");
+        }
+        durationSec = parsed.durationSec || Math.max(1, parsed.ranges.length / 20);
+        const total = parsed.ranges.length;
+        const pickIndices = Array.from(new Set([
+          Math.min(total - 1, total > 4 ? 1 : 0),
+          Math.min(total - 1, Math.floor(total * 0.48)),
+          Math.min(total - 1, Math.floor(total * 0.84))
+        ]));
+
+        for (let idxPos = 0; idxPos < pickIndices.length; idxPos++) {
+          let fIdx = pickIndices[idxPos];
+          try {
+            let img = await decodeJpegSliceToImage(parsed.u8, parsed.ranges[fIdx][0], parsed.ranges[fIdx][1]);
+            width = width || img.naturalWidth || parsed.headerWidth;
+            height = height || img.naturalHeight || parsed.headerHeight;
+            let cap = await buildAiAndThumbBlobs(img, img.naturalWidth, img.naturalHeight);
+            // Falls sehr dunkles Startbild, kurz danach nochmal prüfen
+            if (cap.avgBrightness < 6 && total > 10) {
+              const altIdx = idxPos === 0 ? Math.min(total - 1, Math.floor(total * 0.14)) : Math.min(total - 1, fIdx + 4);
+              if (altIdx !== fIdx) {
+                try {
+                  const altImg = await decodeJpegSliceToImage(parsed.u8, parsed.ranges[altIdx][0], parsed.ranges[altIdx][1]);
+                  const altCap = await buildAiAndThumbBlobs(altImg, altImg.naturalWidth, altImg.naturalHeight);
+                  if (altCap.avgBrightness > cap.avgBrightness) {
+                    cap = altCap;
+                    fIdx = altIdx;
+                  }
+                } catch (e) {}
+              }
+            }
+            const estSec = total > 1 ? (fIdx / (total - 1)) * durationSec : 0.1;
+            framesInfo.push({ sec: Number(estSec.toFixed(1)), ...cap });
+          } catch (e) {}
+        }
+      } else {
+        // Sehr große Datei: Anfang, Mitte, Ende (je 4 MB) scannen
+        const sliceLen = 4 * 1024 * 1024;
+        const offsets = [0, Math.max(0, Math.floor(file.size * 0.48) - sliceLen / 2), Math.max(0, file.size - sliceLen)];
+        durationSec = 10;
+        for (let sIdx = 0; sIdx < offsets.length; sIdx++) {
+          const off = Math.floor(offsets[sIdx]);
+          const buf = await file.slice(off, Math.min(file.size, off + sliceLen)).arrayBuffer();
+          const u8 = new Uint8Array(buf);
+          const ranges = findJpegRangesInBuffer(u8, 30);
+          if (ranges.length > 0) {
+            const pick = ranges[Math.min(ranges.length - 1, Math.floor(ranges.length / 2))];
+            try {
+              const img = await decodeJpegSliceToImage(u8, pick[0], pick[1]);
+              width = width || img.naturalWidth;
+              height = height || img.naturalHeight;
+              const cap = await buildAiAndThumbBlobs(img, img.naturalWidth, img.naturalHeight);
+              framesInfo.push({ sec: Number(([0.2, 5.0, 8.5][sIdx] || 1).toFixed(1)), ...cap });
+            } catch (e) {}
+          }
+        }
+      }
+
+      if (framesInfo.length === 0) {
+        throw new Error("Aus AVI konnten keine lesbaren JPEG-Standbilder extrahiert werden");
+      }
+      return { frames: framesInfo, duration: durationSec, width, height };
+    }
+
     async function processSingleVideoForQueue(file, metaCtx) {
       let rawTs = parseFilenameDateToMs(file.name);
       let timeSource = rawTs ? "FILENAME" : "FILE_MTIME";
       if (!rawTs) rawTs = file.lastModified || Date.now();
+
+      const buildVideoQueueRecord = (captured, duration, w, h, viaAviExtractor = false) => {
+        const bestFr = captured.reduce((best, cur) => (cur.avgBrightness > best.avgBrightness ? cur : best), captured[0]);
+        const offsetMs = (metaCtx.defaultOffsetMin || 0) * 60000;
+        const effectiveTs = rawTs + offsetMs;
+        const plaus = checkTimestampPlausibility(effectiveTs, timeSource, "VIDEO");
+        return {
+          id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
+          batchId: metaCtx.batchId,
+          fingerprint: metaCtx.fingerprint,
+          status: "PENDING",
+          kind: "VIDEO",
+          fileName: file.name,
+          fileSize: file.size,
+          origWidth: w,
+          origHeight: h,
+          aiWidth: bestFr.aiW,
+          aiHeight: bestFr.aiH,
+          durationSec: Number((duration || 0).toFixed(1)),
+          frameSecs: captured.map(c => Number((c.sec || 0).toFixed(1))),
+          cameraId: metaCtx.cameraId,
+          cameraName: metaCtx.cameraName,
+          stripPosition: metaCtx.stripPosition,
+          spotKey: metaCtx.spotKey,
+          spotName: metaCtx.spotName,
+          mappedKanzel: metaCtx.mappedKanzel,
+          exifModel: viaAviExtractor ? "AVI-MJPEG" : "",
+          rawTs,
+          timeOffsetMs: offsetMs,
+          effectiveTs,
+          timeSource,
+          timeSuspect: plaus.suspect,
+          timeWarnReason: plaus.reason,
+          needsOcrTime: true,
+          avgBrightness: bestFr.avgBrightness,
+          aiBlobs: captured.map(c => c.aiBlob),
+          thumbBlob: bestFr.thumbBlob,
+          createdAt: Date.now()
+        };
+      };
+
+      // Direkt-Pfad für Wildkamera-.AVI (spart 8-Sek.-Browser-Timeout je Clip!)
+      const isAviFile = /\.avi$/i.test(String(file.name || "")) || String(file.type || "").toLowerCase().includes("msvideo");
+      if (isAviFile) {
+        try {
+          const aviRes = await extractFramesFromAviMjpeg(file);
+          return buildVideoQueueRecord(aviRes.frames, aviRes.duration, aviRes.width, aviRes.height, true);
+        } catch (aviErr) {
+          // Falls AVI doch H.264 enthält, noch kurz über Browser-Player versuchen, sonst klare Fehlermeldung
+          var __aviPrimaryErr = aviErr;
+        }
+      }
 
       const url = URL.createObjectURL(file);
       const video = document.createElement("video");
@@ -3969,75 +4410,93 @@
           throw new Error("Keine Standbilder aus Video extrahierbar");
         }
 
-        const bestFr = captured.reduce((best, cur) => (cur.avgBrightness > best.avgBrightness ? cur : best), captured[0]);
-        const offsetMs = (metaCtx.defaultOffsetMin || 0) * 60000;
-        const effectiveTs = rawTs + offsetMs;
-        const plaus = checkTimestampPlausibility(effectiveTs, timeSource, "VIDEO");
-
-        return {
-          id: "q_" + Date.now() + "_" + Math.random().toString(36).slice(2, 8),
-          batchId: metaCtx.batchId,
-          fingerprint: metaCtx.fingerprint,
-          status: "PENDING",
-          kind: "VIDEO",
-          fileName: file.name,
-          fileSize: file.size,
-          origWidth: w,
-          origHeight: h,
-          aiWidth: bestFr.aiW,
-          aiHeight: bestFr.aiH,
-          durationSec: Number(duration.toFixed(1)),
-          frameSecs: captured.map(c => Number(c.sec.toFixed(1))),
-          cameraId: metaCtx.cameraId,
-          cameraName: metaCtx.cameraName,
-          stripPosition: metaCtx.stripPosition,
-          spotKey: metaCtx.spotKey,
-          spotName: metaCtx.spotName,
-          mappedKanzel: metaCtx.mappedKanzel,
-          exifModel: "",
-          rawTs,
-          timeOffsetMs: offsetMs,
-          effectiveTs,
-          timeSource,
-          timeSuspect: plaus.suspect,
-          timeWarnReason: plaus.reason,
-          needsOcrTime: true,
-          avgBrightness: bestFr.avgBrightness,
-          aiBlobs: captured.map(c => c.aiBlob),
-          thumbBlob: bestFr.thumbBlob,
-          createdAt: Date.now()
-        };
+        return buildVideoQueueRecord(captured, duration, w, h, false);
+      } catch (vidErr) {
+        if (!isAviFile) {
+          // Letzter Versuch über MJPEG-Extraktor (z. B. bei umbenannten Clips)
+          try {
+            const fbAvi = await extractFramesFromAviMjpeg(file);
+            return buildVideoQueueRecord(fbAvi.frames, fbAvi.duration, fbAvi.width, fbAvi.height, true);
+          } catch (e2) {}
+        }
+        throw (typeof __aviPrimaryErr !== "undefined" && __aviPrimaryErr) ? __aviPrimaryErr : vidErr;
       } finally {
         try { video.pause(); video.removeAttribute("src"); video.load(); } catch (e) {}
         URL.revokeObjectURL(url);
       }
     }
 
+    function showImportResultBox({ added, skippedDups, skippedNonMedia, errors, errorDetails, aviCount }) {
+      const box = document.getElementById("import-result-box");
+      if (!box) return;
+      if (errors === 0 && added > 0 && skippedDups === 0 && aviCount === 0) {
+        box.style.display = "none";
+        return;
+      }
+      box.className = "import-result-box" + (errors > 0 ? " has-err" : (added === 0 ? " has-warn" : ""));
+      const parts = [
+        `✅ <strong>${added}</strong> neu in Warteschlange${aviCount > 0 ? ` (davon <strong>${aviCount}× .AVI</strong> direkt ausgelesen)` : ""}`
+      ];
+      if (skippedDups > 0) parts.push(`🔁 <strong>${skippedDups}</strong> Dublette(n) übersprungen`);
+      if (skippedNonMedia > 0) parts.push(`⏭️ ${skippedNonMedia} Nicht-Medien ignoriert`);
+      if (errors > 0) parts.push(`<span style="color:#ff99ac; font-weight:900;">❌ ${errors} Datei(en) nicht lesbar</span>`);
+
+      const errHtml = (errorDetails && errorDetails.length > 0)
+        ? `<div style="margin-top:6px; padding-top:6px; border-top:1px solid rgba(255,255,255,0.14); font-size:0.7rem; color:#ffd6dc;">
+            ${errorDetails.slice(0, 6).map(e => `• <strong>${escapeHTML(e.name)}</strong>: ${escapeHTML(e.msg)}`).join("<br>")}
+            ${errorDetails.length > 6 ? `<br>… und ${errorDetails.length - 6} weitere Datei(en)` : ""}
+          </div>`
+        : "";
+
+      box.innerHTML = `
+        <div style="display:flex; justify-content:space-between; align-items:flex-start; gap:8px;">
+          <div>${parts.join(" · ")}${errHtml}</div>
+          <button type="button" class="btn-sm btn-no" style="padding:3px 7px; font-size:0.7rem; flex-shrink:0;" onclick="document.getElementById('import-result-box').style.display='none'">✕</button>
+        </div>
+      `;
+      box.style.display = "block";
+    }
+
     async function handleBatchImportFiles(event) {
       const files = Array.from(event.target.files || []);
       event.target.value = "";
       if (files.length === 0) return;
+      await processBatchFileArray(files);
+    }
+
+    async function processBatchFileArray(files) {
+      if (!Array.isArray(files) || files.length === 0) return;
+      if (__isImporting) {
+        showToast("⏳ Import läuft bereits…");
+        return;
+      }
 
       __isImporting = true;
       __importAbortFlag = false;
 
       const btnStart = document.getElementById("btn-start-batch-import");
       const btnFolder = document.getElementById("btn-start-folder-import");
+      const btnDir = document.getElementById("btn-start-dir-import");
       const progWrap = document.getElementById("import-progress-wrap");
       const progTitle = document.getElementById("import-progress-title");
       const progBar = document.getElementById("import-progress-bar");
       const progDetail = document.getElementById("import-progress-detail");
+      const resBox = document.getElementById("import-result-box");
+      if (resBox) resBox.style.display = "none";
 
       if (btnStart) btnStart.disabled = true;
       if (btnFolder) btnFolder.disabled = true;
+      if (btnDir) btnDir.disabled = true;
       if (progWrap) progWrap.style.display = "block";
       if (progBar) progBar.style.width = "2%";
 
       const batchId = "batch_" + Date.now();
       let added = 0;
+      let aviCount = 0;
       let skippedDups = 0;
       let skippedNonMedia = 0;
       let errors = 0;
+      const errorDetails = [];
       let suspectCount = 0;
 
       try {
@@ -4099,9 +4558,11 @@
             await idbPut("queue", item);
             knownFingerprints.add(fingerprint);
             added++;
+            if (item.exifModel === "AVI-MJPEG") aviCount++;
             if (item.timeSuspect) suspectCount++;
           } catch (err) {
             errors++;
+            errorDetails.push({ name: f.name, msg: err?.message || "Unbekannter Lesefehler" });
           }
         }
       } finally {
@@ -4111,16 +4572,19 @@
         }
         if (btnStart) btnStart.disabled = false;
         if (btnFolder) btnFolder.disabled = false;
+        if (btnDir) btnDir.disabled = false;
         if (progWrap) progWrap.style.display = "none";
       }
 
       await renderQueueOverview();
       await refreshDiagnostics();
+      showImportResultBox({ added, skippedDups, skippedNonMedia, errors, errorDetails, aviCount });
 
       let msg = `✅ ${added} neu in Warteschlange`;
-      if (skippedDups > 0) msg += ` · ${skippedDups} Dublette(n) übersprungen`;
-      if (skippedNonMedia > 0) msg += ` · ${skippedNonMedia} Nicht-Medien ignoriert`;
-      if (errors > 0) msg += ` · ${errors} Fehler`;
+      if (aviCount > 0) msg += ` (${aviCount}× .AVI)`;
+      if (skippedDups > 0) msg += ` · ${skippedDups} Dublette(n)`;
+      if (skippedNonMedia > 0) msg += ` · ${skippedNonMedia} ignoriert`;
+      if (errors > 0) msg += ` · ❌ ${errors} Fehler`;
       showToast(msg);
 
       if (added > 0 && suspectCount > 0) {
@@ -4160,6 +4624,14 @@
       });
       if (ordered.length > 0) {
         MODEL_LADDER = ordered.slice(0, 6);
+      }
+      const proModels = modelsArr
+        .filter(m => Array.isArray(m.supportedGenerationMethods) && m.supportedGenerationMethods.includes("generateContent"))
+        .map(m => String(m.name || "").replace("models/", ""))
+        .filter(n => n.startsWith("gemini-") && n.includes("pro") && !/(tts|audio|image|embedding|live|vision)/i.test(n))
+        .sort().reverse();
+      if (proModels.length > 0) {
+        __availableProModels = proModels.slice(0, 3);
       }
     }
 
@@ -4414,6 +4886,595 @@
       return packs;
     }
 
+
+    // =========================================================================
+    // v0.6.0: TROPHÄEN-TAXONOMIE (NIEDERSACHSEN / UELZEN) & STUFE-2 TIEFENPRÜFUNG
+    // =========================================================================
+    const UL_AUTO_DEEP_TROPHY_KEY = "ul_auto_deep_trophy_v1";
+    const UL_DEEP_PREFER_PRO_KEY = "ul_deep_prefer_pro_v1";
+    const TROPHY_DEEP_MODEL_PREFS = [
+      "gemini-2.5-pro",
+      "gemini-2.5-flash",
+      "gemini-2.5-flash-lite",
+      "gemini-2.0-flash"
+    ];
+    let __availableProModels = [];
+
+    function getAutoDeepTrophyPref() {
+      return safeGetItem(UL_AUTO_DEEP_TROPHY_KEY, "1") !== "0";
+    }
+    function getDeepPreferProPref() {
+      return safeGetItem(UL_DEEP_PREFER_PRO_KEY, "1") !== "0";
+    }
+    function saveTrophyAiPrefs() {
+      const autoEl = document.getElementById("setup-auto-deep-trophy");
+      const proEl = document.getElementById("setup-deep-prefer-pro");
+      if (autoEl) safeSetItem(UL_AUTO_DEEP_TROPHY_KEY, autoEl.checked ? "1" : "0");
+      if (proEl) safeSetItem(UL_DEEP_PREFER_PRO_KEY, proEl.checked ? "1" : "0");
+      showToast("🏆 Trophäen-KI-Einstellungen gespeichert");
+    }
+    function loadTrophyAiPrefsUI() {
+      const autoEl = document.getElementById("setup-auto-deep-trophy");
+      const proEl = document.getElementById("setup-deep-prefer-pro");
+      if (autoEl) autoEl.checked = getAutoDeepTrophyPref();
+      if (proEl) proEl.checked = getDeepPreferProPref();
+    }
+
+    const TROPHY_CLASS_OPTIONS = {
+      ROTHIRSCH: [
+        ["", "— Klasse wählen —"],
+        ["IIIb", "IIIb · Jugend schwach (1.–3. Kopf)"],
+        ["IIIa", "IIIa · Jugend gut veranlagt (1.–3. Kopf)"],
+        ["IIb", "IIb · Mittelalt ohne Krone (4.–10. Kopf)"],
+        ["IIa", "IIa · Mittelalt mit beids. Krone (Zukunftshirsch)"],
+        ["Ib", "Ib · Alt/Reif unter Zielstärke (ab ~11. Kopf)"],
+        ["Ia", "Ia · Reifer starker Kronenhirsch (Ernte)"]
+      ],
+      DAMHIRSCH: [
+        ["", "— Klasse wählen —"],
+        ["IIIb", "IIIb · Spießer schwach / Knieper stangig"],
+        ["IIIa", "IIIa · Starker Spießer / guter Knieper"],
+        ["IIb", "IIb · Halbschaufler/Schaufler (Schlitze/schmal)"],
+        ["IIa", "IIa · Guter Halbschaufler/Schaufler (geschlossen)"],
+        ["Ib", "Ib · Reifer Schaufler unter Zielstärke"],
+        ["Ia", "Ia · Reifer Vollschaufler / Erntehirsch (8+ Kopf)"]
+      ],
+      REHBOCK: [
+        ["", "— Altersklasse wählen —"],
+        ["Jährling", "Jährling (1 Jahr)"],
+        ["Jung (2–3 J.)", "Junger Bock (2–3 Jahre)"],
+        ["Mittelalt (4–5 J.)", "Mittelalter Bock (4–5 Jahre)"],
+        ["Alt/Reif (6+ J.)", "Alter / Reifer Bock (6+ Jahre)"],
+        ["Zurückgesetzt", "Zurückgesetzter Bock"]
+      ],
+      KEILER: [
+        ["", "— Altersklasse wählen —"],
+        ["Überläuferkeiler", "Überläuferkeiler (1–2 J.)"],
+        ["Junger Keiler", "Junger Keiler (2–3 J.)"],
+        ["Mittelalter Keiler", "Mittelalter Keiler (3–4 J.)"],
+        ["Reifer / Hauptkeiler", "Reifer / Hauptkeiler (5+ J. / ~100 kg+)"]
+      ]
+    };
+
+    const TROPHY_FORM_PRESETS = {
+      ROTHIRSCH: [
+        "Schmalspießer (1. Kopf)",
+        "Gabler",
+        "Sechser",
+        "Achter",
+        "Eissprossenzehner",
+        "Kronenzehner",
+        "Gerader Zehner",
+        "Ungerader Zehner",
+        "Gerader Zwölfender · beids. Krone",
+        "Ungerader Zwölfender · beids. Krone",
+        "Ungerader Zwölfender · eins. Krone",
+        "Gerader Vierzehnender · beids. Krone",
+        "Ungerader Vierzehnender · beids. Krone",
+        "Sechzehnender+ · starke Krone",
+        "Einstangenhirsch / Schadhirsch",
+        "Zurückgesetzt"
+      ],
+      DAMHIRSCH: [
+        "Spießer (unter Lauscherhöhe)",
+        "Starker Spießer (über Lauscherhöhe)",
+        "Knieper / Löffler",
+        "Halbschaufler",
+        "Schaufler (breite geschlossene Schaufeln)",
+        "Schaufler (tiefe Schlitze / schmal)",
+        "Vollschaufler / Erntehirsch",
+        "Abnorm / Krebsschere / Einstangenhirsch"
+      ],
+      REHBOCK: [
+        "Knopfbock",
+        "Spießer (unter Lauscherhöhe)",
+        "Spießer (über Lauscherhöhe)",
+        "Gabler",
+        "Ungerader Sechser",
+        "Gerader Sechser",
+        "Starker Sechser (starke Rosen/Perlung)",
+        "Einstangenbock",
+        "Abnorm / Korkenzieher / Perückenbock"
+      ],
+      KEILER: [
+        "Keiler · Waffen sichtbar (Gewehre/Haderer)",
+        "Keiler · Pinsel & Klötze deutlich",
+        "Keiler · Hoher Widerrist & Doppelbuckel",
+        "Starker Einzelgänger · Waffen & Klötze"
+      ]
+    };
+
+    function getTrophyStatusLabelDE(st) {
+      const m = { VERFEGT: "Verfegt", BAST: "Im Bast", ABGEWORFEN: "Abgeworfen", UNKLAR: "Status unklar" };
+      return m[String(st || "").toUpperCase()] || "";
+    }
+
+    function getTrophyConfidenceBadgeHTML(conf) {
+      const c = String(conf || "").toUpperCase();
+      if (c === "SICHER") return `<span class="pill trophy-conf-sicher">🟢 Sicher ansprechbar</span>`;
+      if (c === "TEILWEISE") return `<span class="pill trophy-conf-teilweise">🟡 Teilweise sichtbar</span>`;
+      if (c === "UNKLAR") return `<span class="pill trophy-conf-unklar">🔴 Nicht sicher zählbar</span>`;
+      return "";
+    }
+
+    function populateTrophyTaxonomyDropdowns(trophyType, selectedClass = "") {
+      const clsSel = document.getElementById("ev-trophy-class");
+      const formSel = document.getElementById("ev-trophy-form-preset");
+      const coatRow = document.getElementById("ev-trophy-coat-row");
+      const typeKey = normalizeTrophyTypeVal(trophyType) || "ROTHIRSCH";
+
+      if (clsSel) {
+        const opts = TROPHY_CLASS_OPTIONS[typeKey] || TROPHY_CLASS_OPTIONS.ROTHIRSCH;
+        clsSel.innerHTML = opts.map(([val, lbl]) => `<option value="${escapeHTML(val)}">${escapeHTML(lbl)}</option>`).join("");
+        if (selectedClass && !opts.some(([v]) => v === selectedClass)) {
+          const o = document.createElement("option");
+          o.value = selectedClass;
+          o.textContent = selectedClass;
+          clsSel.appendChild(o);
+        }
+        clsSel.value = selectedClass || "";
+      }
+
+      if (formSel) {
+        const forms = TROPHY_FORM_PRESETS[typeKey] || [];
+        formSel.innerHTML = `<option value="">— Schnellwahl übernehmen —</option>` +
+          forms.map(f => `<option value="${escapeHTML(f)}">${escapeHTML(f)}</option>`).join("");
+      }
+
+      if (coatRow) {
+        coatRow.style.display = (typeKey === "DAMHIRSCH") ? "block" : "none";
+      }
+    }
+
+    function onEditTrophyTypeChange() {
+      const tType = document.getElementById("ev-trophy-type")?.value || "";
+      const prevClass = document.getElementById("ev-trophy-class")?.value || "";
+      populateTrophyTaxonomyDropdowns(tType, prevClass);
+      populateTrophySelect(document.getElementById("ev-trophy-select")?.value || "");
+    }
+
+    function applyTrophyFormPreset(presetVal) {
+      if (!presetVal) return;
+      const inp = document.getElementById("ev-trophy-detail");
+      if (inp) inp.value = presetVal;
+    }
+
+    // Erzeugt 1 kleines, komprimiertes Best-Foto (~35–50 KB) für die Durchreiche zur Sauenmatrix
+    async function generateCompressedTrophyPhotoDataUrl(visit) {
+      if (!visit || !visit.isTrophy) return "";
+      let sourceBlob = null;
+
+      // Bestes hochauflösendes Einzelbild aus der Queue holen (solange noch vorhanden)
+      const qBest = visit.bestItemId ? await idbGet("queue", visit.bestItemId).catch(() => null) : null;
+      if (qBest && Array.isArray(qBest.aiBlobs) && qBest.aiBlobs.length > 0) {
+        const fIdx = Math.min(qBest.aiBlobs.length - 1, Math.max(0, Number(visit.bestFrameIndex || 0)));
+        sourceBlob = qBest.aiBlobs[fIdx];
+      }
+      if (!sourceBlob) {
+        for (const qid of (visit.itemIds || [])) {
+          const q = await idbGet("queue", qid).catch(() => null);
+          if (q && Array.isArray(q.aiBlobs) && q.aiBlobs.length > 0) {
+            sourceBlob = q.aiBlobs[0];
+            break;
+          }
+        }
+      }
+      if (!sourceBlob && visit.thumbBlob) sourceBlob = visit.thumbBlob;
+      if (!sourceBlob) return visit.trophyPhotoDataUrl || "";
+
+      const url = URL.createObjectURL(sourceBlob);
+      try {
+        const img = await new Promise((resolve, reject) => {
+          const im = new Image();
+          im.onload = () => resolve(im);
+          im.onerror = () => reject(new Error("Foto-Decode fehlgeschlagen"));
+          im.src = url;
+        });
+        const maxSide = 640;
+        const scale = Math.min(1, maxSide / Math.max(img.naturalWidth || 1, img.naturalHeight || 1));
+        const cw = Math.max(1, Math.round((img.naturalWidth || 320) * scale));
+        const ch = Math.max(1, Math.round((img.naturalHeight || 240) * scale));
+        const c = document.createElement("canvas");
+        c.width = cw;
+        c.height = ch;
+        c.getContext("2d").drawImage(img, 0, 0, cw, ch);
+
+        let qual = 0.74;
+        let dataUrl = c.toDataURL("image/jpeg", qual);
+        // Strikte Größenkappung (<= 55 KB Zeichenlänge -> ca. 40 KB Bild) für sicheren localStorage
+        while (dataUrl.length > 56000 && qual > 0.36) {
+          qual -= 0.08;
+          dataUrl = c.toDataURL("image/jpeg", qual);
+        }
+        c.width = 0; c.height = 0;
+        return dataUrl;
+      } catch (e) {
+        return visit.trophyPhotoDataUrl || "";
+      } finally {
+        URL.revokeObjectURL(url);
+      }
+    }
+
+    const DEEP_TROPHY_SCHEMA = {
+      type: "OBJECT",
+      properties: {
+        isTrophy: { type: "BOOLEAN" },
+        trophyType: {
+          type: "STRING",
+          enum: ["ROTHIRSCH", "DAMHIRSCH", "REHBOCK", "KEILER", "KEINE"]
+        },
+        visibilityLevel: {
+          type: "STRING",
+          enum: ["SICHER", "TEILWEISE", "UNKLAR"]
+        },
+        visibilityReason: { type: "STRING" },
+        leftAntlerSummary: { type: "STRING" },
+        rightAntlerSummary: { type: "STRING" },
+        trophyForm: { type: "STRING" },
+        crownInfo: { type: "STRING" },
+        trophyClass: { type: "STRING" },
+        trophyStatus: {
+          type: "STRING",
+          enum: ["VERFEGT", "BAST", "ABGEWORFEN", "UNKLAR"]
+        },
+        coatColor: { type: "STRING" },
+        bodyAgeEstimate: { type: "STRING" },
+        bodyCharacteristics: { type: "STRING" },
+        distinctiveMarks: { type: "STRING" },
+        matchedTrophyId: { type: "STRING" },
+        matchedTrophyName: { type: "STRING" },
+        matchReason: { type: "STRING" },
+        summaryNote: { type: "STRING" }
+      },
+      required: [
+        "isTrophy",
+        "trophyType",
+        "visibilityLevel",
+        "visibilityReason",
+        "leftAntlerSummary",
+        "rightAntlerSummary",
+        "trophyForm",
+        "crownInfo",
+        "trophyClass",
+        "trophyStatus",
+        "coatColor",
+        "bodyAgeEstimate",
+        "bodyCharacteristics",
+        "distinctiveMarks",
+        "matchedTrophyId",
+        "matchedTrophyName",
+        "matchReason",
+        "summaryNote"
+      ]
+    };
+
+    async function collectBestFramesForDeepTrophy(visit, maxFrames = 3) {
+      const candidates = [];
+      for (const qid of (visit.itemIds || [])) {
+        const qItem = await idbGet("queue", qid).catch(() => null);
+        if (!qItem) continue;
+        const blobs = (Array.isArray(qItem.aiBlobs) && qItem.aiBlobs.length > 0)
+          ? qItem.aiBlobs
+          : (qItem.thumbBlob ? [qItem.thumbBlob] : []);
+        blobs.forEach((blob, fIdx) => {
+          const isBest = qItem.id === visit.bestItemId && fIdx === Number(visit.bestFrameIndex || 0);
+          candidates.push({
+            blob,
+            isBest,
+            brightness: Number(qItem.avgBrightness || 0),
+            ts: Number(qItem.effectiveTs || 0),
+            fileName: qItem.fileName || "Bild"
+          });
+        });
+      }
+      if (candidates.length === 0 && visit.thumbBlob) {
+        candidates.push({ blob: visit.thumbBlob, isBest: true, brightness: 50, ts: visit.startTs || 0, fileName: "Vorschau" });
+      }
+      if (candidates.length <= maxFrames) return candidates;
+
+      // Wähle bis zu 3 möglichst unterschiedliche & scharfe Bilder (Bestbild + früh + spät/anderer Winkel)
+      const picked = [];
+      const best = candidates.find(c => c.isBest) || candidates.reduce((a, b) => (b.brightness > a.brightness ? b : a), candidates[0]);
+      picked.push(best);
+      const others = candidates.filter(c => c !== best);
+      if (others.length > 0) picked.push(others[0]);
+      if (others.length > 1) picked.push(others[others.length - 1]);
+      return picked.slice(0, maxFrames);
+    }
+
+    function buildDeepTrophyModelOrder(qState) {
+      const exhausted = new Set(qState?.exhaustedModels || []);
+      const order = [];
+      if (getDeepPreferProPref()) {
+        __availableProModels.forEach(m => { if (!exhausted.has(m) && !order.includes(m)) order.push(m); });
+        if (!exhausted.has("gemini-2.5-pro") && !order.includes("gemini-2.5-pro")) order.push("gemini-2.5-pro");
+      }
+      MODEL_LADDER.forEach(m => { if (!exhausted.has(m) && !order.includes(m)) order.push(m); });
+      TROPHY_DEEP_MODEL_PREFS.forEach(m => { if (!exhausted.has(m) && !order.includes(m)) order.push(m); });
+      return order;
+    }
+
+    async function callGeminiDeepTrophyCheck(visit, apiKey, signal = null) {
+      const frames = await collectBestFramesForDeepTrophy(visit, 3);
+      if (frames.length === 0) {
+        throw new Error("Keine Bilddaten für diesen Besuch vorhanden");
+      }
+
+      const expectedType = normalizeTrophyTypeVal(visit.trophyType) || defaultTrophyTypeForCategory(visit.category);
+      const smProfiles = readSauenmatrixTrophaeen();
+      const relevantProfiles = expectedType
+        ? smProfiles.filter(p => !p.species || p.species === expectedType)
+        : smProfiles;
+
+      const profilesBlock = relevantProfiles.length > 0
+        ? relevantProfiles.slice(0, 15).map(p =>
+            `- ID="${p.id}" | Name="${p.name}" | Art=${p.species || "?"} | Alter=${p.ageEstimate || "?"}${p.traits ? ` | Merkmale=${p.traits}` : ""}`
+          ).join("
+")
+        : "(Noch keine bekannten Steckbriefe in sm_trophaeen_v1 vorhanden)";
+
+      const promptLines = [
+        "Du bist ein hochpräziser, weidgerechter deutscher Wildbiologe und Rot-/Dam-/Reh-/Schwarzwild-Gutachter (Richtlinien Niedersachsen / Landkreis Uelzen / Hochwildring Süsing).",
+        `Prüfe diesen einzelnen Wildkamera-Besuch extrem gründlich anhand von ${frames.length} Bild(ern) desselben Stücks (Ort: ${visit.spotName}, Datum: ${formatDateDE(visit.startTs)} ${formatTimeHHMM(visit.startTs)} Uhr, Vorklassifizierung: ${visit.category} / ${visit.speciesDetail || ""}).`,
+        "",
+        "VERBINDLICHE PFLICHT-CHECKLISTE (Punkt für Punkt abarbeiten):",
+        "1. ART & GESCHLECHT ABSICHERN: Eindeutig trennen zwischen ROTHIRSCH, DAMHIRSCH, REHBOCK und KEILER (oder KEINE, falls weiblich/Jungwild ohne Trophäe). Bei Nacht/IR besonders auf Spiegel, Körperproportionen, Pinsel/Klötze und Hauptform achten.",
+        "2. STANGEN GETRENNT PRÜFEN (LINKS & RECHTS): Zähle und beschreibe jede Stange einzeln (leftAntlerSummary & rightAntlerSummary). Grundregel Rotwild: Enden zählen ab ca. 5 cm Länge. Augsprosse, Eissprosse, Mittelsprosse und Krone (3+ Enden über Mittelsprosse, einseitig oder beidseitig) benennen. Die endenreichere Stange verdoppeln: beide Seiten gleich = 'Gerader ...', ungleich = 'Ungerader ...' (z. B. 6 + 5 = 'Ungerader Zwölfender'). Beim Damhirsch sauber trennen: Spießer / Knieper (Löffler) / Halbschaufler / Schaufler / Vollschaufler sowie Schaufelbreite, tiefe Schlitze, Dreieck-/Karobildung, Randzacken. Beim Rehbock: Knopfbock / Spießer / Gabler / Ungerader Sechser / Gerader Sechser / Abnorm / lauscherhoch / über Lauscherhoch / Perlung.",
+        "3. KÖRPERBAU UNABHÄNGIG VOM GEWEIH BEWERTEN (ALTERS-CHECK): Prüfe Hauptform (spitz vs. breit/stumpf), Trägerhaltung (aufrecht vs. tief/waagerecht), Mähne, Widerrist und Rumpftiefe getrennt vom Geweih! Leite erst aus KÖRPERBAU + GEWEIH zusammen die Alters- & Güteklasse ab:",
+        "   - Rothirsch: IIIb (1.–3. Kopf schwach), IIIa (1.–3. Kopf stark), IIb (4.–10. Kopf ohne Krone), IIa (4.–10. Kopf mit beidseitiger Krone = Zukunftshirsch), Ib (ab ~11. Kopf unter Zielstärke / einseitige Krone / zurückgesetzt), Ia (ab ~11.–12. Kopf reifer starker beidseitiger Kronenhirsch).",
+        "   - Damhirsch: IIIb/IIIa (1.–2. Kopf Spießer/Knieper), IIb/IIa (3.–7. Kopf Halbschaufler/Schaufler; IIa = breite geschlossene Schaufeln, IIb = schmal/tiefe Schlitze), Ib/Ia (ab 8. Kopf reifer Vollschaufler).",
+        "   - Rehbock: 'Jährling', 'Jung (2–3 J.)', 'Mittelalt (4–5 J.)', 'Alt/Reif (6+ J.)' oder 'Zurückgesetzt'.",
+        "   - Keiler: 'Überläuferkeiler', 'Junger Keiler', 'Mittelalter Keiler' oder 'Reifer / Hauptkeiler' (Waffen/Gewehre/Haderer, Pinsel, Klötze, hoher Widerrist/Doppelbuckel).",
+        "4. ZUSTAND & BESONDERHEITEN: trophyStatus ('VERFEGT', 'BAST', 'ABGEWORFEN', 'UNKLAR'). Bei Damwild zwingend coatColor angeben ('Normal/Rotbraun', 'Schwarz', 'Weiß' oder 'Menil'; bei anderen Arten ''). Individuelle Merkmale (abgebrochene Enden, Asymmetrie, Schlitze, Narben) in distinctiveMarks.",
+        "5. ABGLEICH MIT BEKANNTEN STECKBRIEFEN AUS sm_trophaeen_v1:",
+        profilesBlock,
+        "   -> Falls das Stück gut zu einem vorhandenen Steckbrief passt, gib matchedTrophyId, matchedTrophyName und matchReason an; sonst alle drei leer lassen.",
+        "6. STRENGE EHRLICHKEITSPFLICHT (SICHTBARKEITS-AMPEL):",
+        "   - visibilityLevel='SICHER': Scharf, beide Stangen/Schaufeln & Körper gut sichtbar.",
+        "   - visibilityLevel='TEILWEISE': Nur eine Stange, Halbprofil oder leichte Unschärfe -> Vorschlag klar als vorläufig kennzeichnen.",
+        "   - visibilityLevel='UNKLAR': IR-Überbelichtung, starke Bewegung, verdeckt oder zu weit weg -> ERFINDE AUSDRÜCKLICH KEINE ENDEN! Setze trophyForm='Geweih/Enden nicht sicher zählbar', trophyClass='' und begründe kurz in visibilityReason."
+      ];
+
+      const parts = [{ text: promptLines.join("
+") }];
+      for (let i = 0; i < frames.length; i++) {
+        const b64 = await blobToBase64Pure(frames[i].blob);
+        parts.push({ text: `Bild ${i + 1}/${frames.length} (${frames[i].fileName})` });
+        parts.push({ inline_data: { mime_type: "image/jpeg", data: b64 } });
+      }
+
+      const qState = await loadQuotaState();
+      const modelOrder = buildDeepTrophyModelOrder(qState);
+      let lastErr = null;
+
+      for (const modelName of modelOrder) {
+        const url = `https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(modelName)}:generateContent?key=${encodeURIComponent(apiKey)}`;
+        const body = {
+          contents: [{ role: "user", parts }],
+          generationConfig: {
+            temperature: 0.1,
+            responseMimeType: "application/json",
+            responseSchema: DEEP_TROPHY_SCHEMA
+          }
+        };
+
+        const reqCtrl = new AbortController();
+        const onAbort = () => reqCtrl.abort();
+        if (signal) {
+          if (signal.aborted) reqCtrl.abort();
+          else signal.addEventListener("abort", onAbort, { once: true });
+        }
+        const tId = setTimeout(() => reqCtrl.abort(), 75000);
+        try {
+          const resp = await fetch(url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+            signal: reqCtrl.signal
+          });
+          const rawText = await resp.text();
+          let parsed = null;
+          try { parsed = JSON.parse(rawText); } catch (e) {}
+
+          if (!resp.ok) {
+            const err = new Error(parsed?.error?.message || `HTTP ${resp.status}`);
+            err.httpStatus = resp.status;
+            err.rawDetails = rawText;
+            lastErr = err;
+            // Bei 404 / 429 direkt nächstes Gratis-Modell in der Staffel probieren!
+            if (resp.status === 404 || resp.status === 429 || resp.status >= 500) {
+              continue;
+            }
+            throw err;
+          }
+
+          const candText = parsed?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+          const clean = candText.replace(/^```json\s*/i, "").replace(/```\s*$/i, "").trim();
+          const resObj = JSON.parse(clean);
+
+          qState.requestsToday = (qState.requestsToday || 0) + 1;
+          qState.imagesToday = (qState.imagesToday || 0) + frames.length;
+          await saveQuotaState(qState);
+          return { result: resObj, modelUsed: modelName, frameCount: frames.length };
+        } catch (err) {
+          lastErr = err;
+          if (err.name === "AbortError" && signal && signal.aborted) throw err;
+        } finally {
+          clearTimeout(tId);
+          if (signal) signal.removeEventListener("abort", onAbort);
+        }
+      }
+      throw lastErr || new Error("Alle Modelle für Trophäen-Tiefenprüfung fehlgeschlagen");
+    }
+
+    function applyDeepTrophyResultToVisit(v, deepRes, modelUsed) {
+      const r = deepRes || {};
+      const normType = normalizeTrophyTypeVal(r.trophyType);
+      v.trophyDeepChecked = true;
+      v.trophyDeepModel = modelUsed || "";
+      v.trophyDeepAt = Date.now();
+      v.trophyConfidence = ["SICHER", "TEILWEISE", "UNKLAR"].includes(String(r.visibilityLevel || "").toUpperCase())
+        ? String(r.visibilityLevel).toUpperCase()
+        : "TEILWEISE";
+      v.trophyVisibilityReason = String(r.visibilityReason || "").trim();
+      v.trophyLeftAntler = String(r.leftAntlerSummary || "").trim();
+      v.trophyRightAntler = String(r.rightAntlerSummary || "").trim();
+      v.trophyCrownInfo = String(r.crownInfo || "").trim();
+      v.trophyBodyNotes = String(r.bodyCharacteristics || "").trim();
+      v.trophyDistinctiveMarks = String(r.distinctiveMarks || "").trim();
+      v.trophyMatchHint = r.matchedTrophyName
+        ? `${r.matchedTrophyName}${r.matchReason ? " (" + r.matchReason + ")" : ""}`
+        : "";
+
+      if (r.isTrophy && normType) {
+        v.isTrophy = true;
+        v.trophyType = normType;
+        v.trophyClass = String(r.trophyClass || "").trim();
+        v.trophyStatus = ["VERFEGT", "BAST", "ABGEWORFEN", "UNKLAR"].includes(String(r.trophyStatus || "").toUpperCase())
+          ? String(r.trophyStatus).toUpperCase()
+          : "";
+        v.trophyCoatColor = normType === "DAMHIRSCH" ? String(r.coatColor || "").trim() : "";
+        v.trophyAgeEstimate = String(r.bodyAgeEstimate || "").trim();
+
+        const formBits = [];
+        if (r.trophyForm) formBits.push(String(r.trophyForm).trim());
+        if (r.crownInfo && !String(r.trophyForm || "").toLowerCase().includes("krone") && !/keine|unklar|nicht/i.test(r.crownInfo)) {
+          formBits.push(String(r.crownInfo).trim());
+        }
+        if (r.distinctiveMarks && !/keine|nicht erkennbar/i.test(r.distinctiveMarks)) {
+          formBits.push(String(r.distinctiveMarks).trim());
+        }
+        v.trophyDetail = formBits.join(" · ") || v.trophyDetail || getTrophyTypeLabelDE(normType);
+
+        // Falls ein bekannter Steckbrief gematcht wurde und noch keiner gesetzt ist, als Vorschlag verknüpfen
+        if (!v.trophyId && r.matchedTrophyId) {
+          const smProfiles = readSauenmatrixTrophaeen();
+          const hit = smProfiles.find(p => p.id === r.matchedTrophyId || p.name.toLowerCase() === String(r.matchedTrophyName || "").toLowerCase());
+          if (hit) {
+            v.trophyId = hit.id;
+            v.trophyTag = hit.name;
+          }
+        }
+      } else if (r.isTrophy === false && !v.manualEdited) {
+        // KI hat bei Tiefenprüfung erkannt, dass es doch kein Trophäenträger ist (z. B. weibliches Stück)
+        v.isTrophy = false;
+        v.trophyType = "";
+        v.trophyClass = "";
+        v.trophyDetail = "";
+      }
+
+      if (r.summaryNote && (!v.notes || v.notes.length < 15)) {
+        v.notes = String(r.summaryNote).trim();
+      }
+      v.updatedAt = Date.now();
+      return v;
+    }
+
+    let __deepTrophyBusy = false;
+
+    async function runDeepTrophyCheckForVisit(visitId, silent = false) {
+      if (__deepTrophyBusy) {
+        if (!silent) showToast("⏳ Trophäen-Tiefenprüfung läuft bereits…");
+        return null;
+      }
+      const apiKey = (safeGetItem(UL_API_KEY_STORAGE, "") || "").trim();
+      if (!apiKey) {
+        if (!silent) showToast("🔑 Bitte zuerst API-Key im Setup speichern");
+        return null;
+      }
+      if (!navigator.onLine) {
+        if (!silent) showToast("📡 Keine Internetverbindung für Tiefenprüfung");
+        return null;
+      }
+      const v = await idbGet("visits", visitId).catch(() => null);
+      if (!v) return null;
+
+      __deepTrophyBusy = true;
+      if (!silent) showToast(`🔬 Starte Trophäen-Tiefenprüfung (${v.spotName})…`);
+      try {
+        const { result, modelUsed, frameCount } = await callGeminiDeepTrophyCheck(v, apiKey);
+        applyDeepTrophyResultToVisit(v, result, modelUsed);
+        if (v.isTrophy && !v.trophyPhotoDataUrl) {
+          v.trophyPhotoDataUrl = await generateCompressedTrophyPhotoDataUrl(v);
+        }
+        await idbPut("visits", v);
+        if (!silent) {
+          await renderPruefenVisits(false);
+          await renderUebergabeView();
+          updateTachoUI();
+          const badge = v.trophyClass ? `${v.trophyClass} · ` : "";
+          showToast(`🏆 Tiefenprüfung (${frameCount} Bild., ${modelUsed}): ${badge}${v.trophyDetail || v.trophyConfidence || "fertig"}`);
+        }
+        return v;
+      } catch (err) {
+        if (!silent) showToast(`⚠️ Tiefenprüfung fehlgeschlagen: ${err.message}`);
+        return null;
+      } finally {
+        __deepTrophyBusy = false;
+      }
+    }
+
+    async function runDeepTrophyFromEditModal() {
+      const id = document.getElementById("ev-id")?.value;
+      if (!id) return;
+      const btn = document.getElementById("btn-ev-deep-trophy");
+      if (btn) { btn.disabled = true; btn.textContent = "⏳ Prüfe…"; }
+      try {
+        const updated = await runDeepTrophyCheckForVisit(id, false);
+        if (updated) {
+          await openEditVisitModal(id);
+        }
+      } finally {
+        if (btn) { btn.disabled = false; btn.textContent = "🔬 Tiefenprüfung"; }
+      }
+    }
+
+    async function runAutoDeepTrophyPassAfterQueue() {
+      if (!getAutoDeepTrophyPref()) return 0;
+      const apiKey = (safeGetItem(UL_API_KEY_STORAGE, "") || "").trim();
+      if (!apiKey || !navigator.onLine) return 0;
+      const allVisits = await idbGetAll("visits").catch(() => []);
+      const targets = allVisits.filter(v =>
+        v.isTrophy &&
+        !v.trophyDeepChecked &&
+        v.reviewState === "OPEN" &&
+        ["ROTWILD", "DAMWILD", "REHWILD", "SCHWARZWILD"].includes(v.category)
+      ).slice(0, 8);
+      if (targets.length === 0) return 0;
+
+      let checked = 0;
+      for (let i = 0; i < targets.length; i++) {
+        const v = targets[i];
+        updateTachoUI("🔬 Trophäe", "pill-yellow", `Stufe 2: Trophäen-Tiefenprüfung ${i + 1}/${targets.length} (${v.spotName})…`);
+        const ok = await runDeepTrophyCheckForVisit(v.id, true);
+        if (ok) checked++;
+        if (i < targets.length - 1) {
+          await new Promise(r => setTimeout(r, Math.max(4000, getPaceSecPref() * 1000)));
+        }
+      }
+      return checked;
+    }
+
     const GEMINI_RESPONSE_SCHEMA = {
       type: "OBJECT",
       properties: {
@@ -4454,7 +5515,17 @@
                 type: "STRING",
                 enum: ["REHBOCK", "DAMHIRSCH", "ROTHIRSCH", "KEILER", "KEINE"]
               },
+              trophyClass: { type: "STRING" },
               trophyDetail: { type: "STRING" },
+              trophyStatus: {
+                type: "STRING",
+                enum: ["VERFEGT", "BAST", "ABGEWORFEN", "UNKLAR", ""]
+              },
+              coatColor: { type: "STRING" },
+              trophyConfidence: {
+                type: "STRING",
+                enum: ["SICHER", "TEILWEISE", "UNKLAR", ""]
+              },
               boarBreakdown: {
                 type: "OBJECT",
                 properties: {
@@ -4493,7 +5564,11 @@
               "totalCount",
               "isTrophy",
               "trophyType",
+              "trophyClass",
               "trophyDetail",
+              "trophyStatus",
+              "coatColor",
+              "trophyConfidence",
               "boarBreakdown",
               "bestFrameIndex",
               "ocrTimestamp",
@@ -4520,12 +5595,14 @@
             "   - SCHWARZWILD vs. DACHS / WASCHBÄR / MARDERHUND: Verwechsle einzelne, tief und gedrungen gebaute Tiere in Bodennähe nicht vorschnell mit Schwarzwild! Prüfe auf Gesichtsstreifen (Dachs: schwarz-weiße Kopfstreifen, keilförmiger Kopf), dunkle Augenmaske & geringelten Schwanz (Waschbär) oder kurze Läufe, rundlichen Körper, dunkle Backenmaske & einfarbigen kurzen Schwanz ohne Ringe (Marderhund / Enok -> category: 'RAUBWILD', speciesDetail: 'Marderhund (Enok)', NIEMALS einfach 'Marder'!). Wähle SCHWARZWILD nur bei echten Sauen-Merkmalen (Wurf/Rüsselscheibe, hochläufigerer Körper mit abfallendem Rücken, Pürzel, passende Größe).",
             "   - WILDKATZE vs. HAUSKATZE: Achte bei Katzen genau auf buschigen, stumpf endenden Schwanz mit dunklen Ringen und schwarzer Spitze, verwaschene Zeichnung und kräftigen Körperbau -> category: 'WILDKATZE' (immer isUncertain=true zur Kontrolle). Im Zweifel zwischen Wild- und Hauskatze NICHT voreilig HAUSTIER wählen, sondern UNKLAR mit isUncertain=true.",
             "   - GOLDSCHAKAL vs. FUCHS / WOLF: Hochläufiger als Fuchs, kürzerer Schwanz mit dunkler Spitze, graugelbes Fell, deutlich kleiner als Wolf -> bei Verdacht category: 'SCHAKAL' und isUncertain=true (Gelb) setzen.",
-            "4. AUSFÜHRLICHE TROPHÄENTRÄGER-ERKENNUNG (isTrophy, trophyType, trophyDetail):",
-            "   - REHWILD (Rehbock): Prüfe den Kopf genau! Benenne alles, was oben drauf ist: kleine Knöpfe/Gnubbel ('Knopfbock'), Spieße ('Spießer'), Gabler ('Gabler'), Sechser ('Gerader 6er' / 'Ungerader 6er'), 'Abnormes Gehörn', 'Bast-Gehörn' oder 'Perückenbock'. Setze isTrophy=true, trophyType='REHBOCK', trophyDetail=<kurze genaue Beschreibung>.",
-            "   - DAMWILD (Damhirsch): Unterscheide nach Geweih-Ausprägung: kleine Spieße ('Spießer'), 'Knieper / Löffler', 'Halbschaufler', starke/große Schaufeln ('Starker Schaufler'). Setze isTrophy=true, trophyType='DAMHIRSCH', trophyDetail=<Beschreibung>.",
-            "   - ROTWILD (Rothirsch): Unterscheide nach Geweih-Ausprägung: 'Spießer', 'Gabler', 'Sechser' / 'Achter' / 'Zehner', 'Kronenhirsch', 'Starkes Geweih'. Setze isTrophy=true, trophyType='ROTHIRSCH', trophyDetail=<Beschreibung>.",
-            "   - SCHWARZWILD (Keiler): Achte sehr genau auf echte Keiler-Merkmale: sichtbare Waffen/Zähne (Gewehre/Haderer), typischer Keilerbuckel / markanter Doppelbuckel (Körperkontur), sichtbar ausgeprägte Klötze hinten (Hoden/Kurzwildbret) sowie Bauchpinsel. NUR wenn mindestens eines dieser Merkmale sichtbar ist: isTrophy=true, trophyType='KEILER' und in trophyDetail kurz nennen, woran erkannt (z. B. 'Keiler · Waffen & Pinsel', 'Keiler · Doppelbuckel & Klötze').",
-            "   - Wenn KEIN Trophäenträger erkennbar ist (oder bei weiblichem Wild/Jungwild/anderen Arten): isTrophy=false, trophyType='KEINE', trophyDetail=''.",
+            "4. WEIDGERECHTE TROPHÄENTRÄGER-ERKENNUNG (isTrophy, trophyType, trophyClass, trophyDetail, trophyStatus, coatColor, trophyConfidence):",
+            "   - REHWILD (Rehbock): Knopfbock, Spießer (unter/über Lauscherhöhe), Gabler, Ungerader Sechser, Gerader Sechser, Abnorm/Perückenbock. trophyClass: 'Jährling', 'Jung (2–3 J.)', 'Mittelalt (4–5 J.)', 'Alt/Reif (6+ J.)' oder ''.",
+            "   - DAMWILD (Damhirsch): Spießer, Knieper/Löffler, Halbschaufler, Schaufler, Vollschaufler. Klasse vorschlagen (IIIb/IIIa/IIb/IIa/Ib/Ia) und zwingend Farbschlag in coatColor ('Normal/Rotbraun', 'Schwarz', 'Weiß', 'Menil').",
+            "   - ROTWILD (Rothirsch): Schmalspießer, Gabler, Sechser, Achter, Eissprossenzehner, Gerader/Ungerader Zehner, Gerader/Ungerader Zwölfender, Vierzehnender+, Krone einseitig/beidseitig (3+ Enden über Mittelsprosse). Klasse nach Körperbau + Geweih vorschlagen: IIIb/IIIa (1.–3. Kopf), IIb (4.–10. Kopf ohne Krone), IIa (4.–10. Kopf beids. Krone), Ib/Ia (ab ~11. Kopf).",
+            "   - SCHWARZWILD (Keiler): NUR wenn mindestens ein echtes Merkmal sichtbar (Waffen/Gewehre/Haderer, Pinsel, Klötze, markanter hoher Widerrist/Doppelbuckel): isTrophy=true, trophyType='KEILER', trophyClass ('Überläuferkeiler'/'Junger Keiler'/'Mittelalter Keiler'/'Reifer / Hauptkeiler').",
+            "   - Geweihstatus in trophyStatus ('VERFEGT', 'BAST', 'ABGEWORFEN', 'UNKLAR' oder '').",
+            "   - EHRLICHKEITSPFLICHT: Setze trophyConfidence ('SICHER', 'TEILWEISE' oder 'UNKLAR'). Wenn Enden im dunklen/unscharfen Bild nicht sicher zählbar sind, KEINE Enden erfinden -> trophyDetail='Geweih/Enden nicht sicher zählbar', trophyClass='', trophyConfidence='UNKLAR'.",
+            "   - Kein Trophäenträger: isTrophy=false, trophyType='KEINE', trophyClass='', trophyDetail='', trophyStatus='', coatColor='', trophyConfidence=''.",
             "5. Zähle bei totalCount das Maximum gleichzeitig sichtbarer Individuen auf EINEM Bild des Eintrags (nicht über Video-Frames addieren!).",
             "6. Bei SCHWARZWILD: Verteile totalCount auf boarBreakdown. Nur wenn Geschlecht/Klasse wirklich sicher erkennbar ist (z. B. Pinsel/Waffen/Klötze -> keiler, Striche/führend -> bache, typische Streifen/geringe Größe -> frischling), nutze exakte Klassen. Sonst grossUnklar, kleinUnklar oder unbekannt. Summe muss totalCount entsprechen; bei Nicht-Schwarzwild alle Werte 0.",
             "7. INFOBALKEN- & VIDEO-START-INFO-OCR (SEHR WICHTIG):",
@@ -4711,7 +5788,11 @@
         totalCount: 0,
         isTrophy: false,
         trophyType: "",
+        trophyClass: "",
         trophyDetail: "",
+        trophyStatus: "",
+        coatColor: "",
+        trophyConfidence: "",
         boarBreakdown: { keiler: 0, bache: 0, ueberlaeuferBache: 0, ueberlaeuferKeiler: 0, frischling: 0, grossUnklar: 0, kleinUnklar: 0, unbekannt: 0 },
         bestFrameIndex: 0,
         ocrTimestamp: "",
@@ -4723,9 +5804,17 @@
       safeEntry.isTrophy = Boolean(safeEntry.isTrophy && (safeEntry.trophyType || safeEntry.trophyDetail));
       if (!safeEntry.isTrophy) {
         safeEntry.trophyType = "";
+        safeEntry.trophyClass = "";
         safeEntry.trophyDetail = "";
+        safeEntry.trophyStatus = "";
+        safeEntry.coatColor = "";
+        safeEntry.trophyConfidence = "";
       } else {
+        safeEntry.trophyClass = String(safeEntry.trophyClass || "").trim();
         safeEntry.trophyDetail = String(safeEntry.trophyDetail || "").trim();
+        safeEntry.trophyStatus = String(safeEntry.trophyStatus || "").trim().toUpperCase();
+        safeEntry.coatColor = String(safeEntry.coatColor || "").trim();
+        safeEntry.trophyConfidence = String(safeEntry.trophyConfidence || "").trim().toUpperCase();
       }
       safeEntry.ocrCameraInfo = String(safeEntry.ocrCameraInfo || "").trim();
 
@@ -5080,6 +6169,12 @@
         }
         await flagBatchDateOutliers();
         await syncVisitsFromQueue(false);
+        if (!wasPausing && processedInRun > 0) {
+          const deepCnt = await runAutoDeepTrophyPassAfterQueue();
+          if (deepCnt > 0) {
+            showToast(`🔬 ${deepCnt} Trophäenträger automatisch tiefengeprüft`);
+          }
+        }
         await renderQueueOverview();
         await renderPruefenVisits();
         await renderUebergabeView();
@@ -5504,7 +6599,10 @@
           id: String(t.id || t.name || t.titel || "").trim(),
           name: String(t.name || t.titel || "").trim(),
           species: String(t.species || t.art || "").trim().toUpperCase(),
-          ageEstimate: String(t.ageEstimate || "").trim()
+          ageEstimate: String(t.ageEstimate || "").trim(),
+          traits: String(t.traits || t.merkmale || "").trim(),
+          trophyClass: String(t.trophyClass || t.klasse || "").trim(),
+          note: String(t.note || "").trim()
         }))
         .filter(t => t.name);
     }
@@ -5602,6 +6700,10 @@
       const trophyDetail = isTrophy
         ? (String(bestTrophyItem.aiResult?.trophyDetail || "").trim() || getTrophyTypeLabelDE(trophyType))
         : "";
+      const trophyClass = isTrophy ? String(bestTrophyItem.aiResult?.trophyClass || "").trim() : "";
+      const trophyStatus = isTrophy ? String(bestTrophyItem.aiResult?.trophyStatus || "").trim().toUpperCase() : "";
+      const trophyCoatColor = (isTrophy && trophyType === "DAMHIRSCH") ? String(bestTrophyItem.aiResult?.coatColor || "").trim() : "";
+      const trophyConfidence = isTrophy ? String(bestTrophyItem.aiResult?.trophyConfidence || "").trim().toUpperCase() : "";
 
       let boarBreakdown = emptyBoarBreakdown();
       if (cat === "SCHWARZWILD") {
@@ -5655,7 +6757,22 @@
         rottenTag: "",
         isTrophy,
         trophyType,
+        trophyClass,
         trophyDetail,
+        trophyStatus,
+        trophyCoatColor,
+        trophyConfidence,
+        trophyAgeEstimate: "",
+        trophyBodyNotes: "",
+        trophyLeftAntler: "",
+        trophyRightAntler: "",
+        trophyCrownInfo: "",
+        trophyDistinctiveMarks: "",
+        trophyVisibilityReason: "",
+        trophyMatchHint: "",
+        trophyDeepChecked: false,
+        trophyDeepModel: "",
+        trophyPhotoDataUrl: "",
         trophyTag: "",
         trophyId: "",
         notes: bestRes.notes || "",
@@ -5755,8 +6872,24 @@
         (String(c.trophyDetail || "").length > String(b.trophyDetail || "").length ? c : b),
         trophyVisits[0] || null
       );
-      const trophyType = isTrophy ? (normalizeTrophyTypeVal(topTrophyV?.trophyType) || defaultTrophyTypeForCategory(base.category)) : "";
-      const trophyDetail = isTrophy ? (topTrophyV?.trophyDetail || "") : "";
+      const deepTrophyV = trophyVisits.find(v => v.trophyDeepChecked) || topTrophyV;
+      const trophyType = isTrophy ? (normalizeTrophyTypeVal(deepTrophyV?.trophyType) || defaultTrophyTypeForCategory(base.category)) : "";
+      const trophyDetail = isTrophy ? (deepTrophyV?.trophyDetail || "") : "";
+      const trophyClass = isTrophy ? (deepTrophyV?.trophyClass || sorted.find(v => v.trophyClass)?.trophyClass || "") : "";
+      const trophyStatus = isTrophy ? (deepTrophyV?.trophyStatus || sorted.find(v => v.trophyStatus)?.trophyStatus || "") : "";
+      const trophyCoatColor = isTrophy ? (deepTrophyV?.trophyCoatColor || sorted.find(v => v.trophyCoatColor)?.trophyCoatColor || "") : "";
+      const trophyConfidence = isTrophy ? (deepTrophyV?.trophyConfidence || sorted.find(v => v.trophyConfidence)?.trophyConfidence || "") : "";
+      const trophyAgeEstimate = isTrophy ? (deepTrophyV?.trophyAgeEstimate || sorted.find(v => v.trophyAgeEstimate)?.trophyAgeEstimate || "") : "";
+      const trophyBodyNotes = isTrophy ? (deepTrophyV?.trophyBodyNotes || "") : "";
+      const trophyLeftAntler = isTrophy ? (deepTrophyV?.trophyLeftAntler || "") : "";
+      const trophyRightAntler = isTrophy ? (deepTrophyV?.trophyRightAntler || "") : "";
+      const trophyCrownInfo = isTrophy ? (deepTrophyV?.trophyCrownInfo || "") : "";
+      const trophyDistinctiveMarks = isTrophy ? (deepTrophyV?.trophyDistinctiveMarks || "") : "";
+      const trophyVisibilityReason = isTrophy ? (deepTrophyV?.trophyVisibilityReason || "") : "";
+      const trophyMatchHint = isTrophy ? (deepTrophyV?.trophyMatchHint || "") : "";
+      const trophyDeepChecked = isTrophy ? Boolean(deepTrophyV?.trophyDeepChecked) : false;
+      const trophyDeepModel = isTrophy ? (deepTrophyV?.trophyDeepModel || "") : "";
+      const trophyPhotoDataUrl = isTrophy ? (sorted.find(v => v.trophyPhotoDataUrl)?.trophyPhotoDataUrl || "") : "";
       const firstTrophyTag = sorted.find(v => v.trophyTag)?.trophyTag || "";
       const firstTrophyId = sorted.find(v => v.trophyId)?.trophyId || "";
 
@@ -5785,7 +6918,22 @@
         rottenTag: firstRotten,
         isTrophy,
         trophyType,
+        trophyClass,
         trophyDetail,
+        trophyStatus,
+        trophyCoatColor,
+        trophyConfidence,
+        trophyAgeEstimate,
+        trophyBodyNotes,
+        trophyLeftAntler,
+        trophyRightAntler,
+        trophyCrownInfo,
+        trophyDistinctiveMarks,
+        trophyVisibilityReason,
+        trophyMatchHint,
+        trophyDeepChecked,
+        trophyDeepModel,
+        trophyPhotoDataUrl,
         trophyTag: firstTrophyTag,
         trophyId: firstTrophyId,
         notes: notesList.slice(0, 2).join(" | "),
@@ -5815,7 +6963,7 @@
       const queueById = new Map(allQueue.map(q => [q.id, q]));
 
       const eligible = allVisits.filter(v => {
-        if (v.reviewState === "SENT" || v.reviewState === "TRASHED" || v.ampel === "TRASH") return false;
+        if (v.reviewState === "SENT" || v.reviewState === "DISMISSED" || v.reviewState === "TRASHED" || v.ampel === "TRASH") return false;
         if (v.category === "LEERBILD") return false;
         if (onlyConfirmed && v.reviewState !== "CONFIRMED") return false;
         if (onlyCategory && v.category !== onlyCategory) return false;
@@ -5932,6 +7080,7 @@
         const isProtected =
           v.reviewState === "CONFIRMED" ||
           v.reviewState === "SENT" ||
+          v.reviewState === "DISMISSED" ||
           isManualTrash ||
           (v.fromBackup && !hasAnyQueueItem) ||
           (!resetEdited && v.manualEdited);
@@ -6127,7 +7276,7 @@
 
       const yellowList = visits.filter(v => v.reviewState === "OPEN" && v.ampel === "YELLOW");
       const greenList = visits.filter(v => v.reviewState === "OPEN" && v.ampel === "GREEN");
-      const confirmedList = visits.filter(v => v.reviewState === "CONFIRMED" || v.reviewState === "SENT");
+      const confirmedList = visits.filter(v => v.reviewState === "CONFIRMED" || v.reviewState === "SENT" || v.reviewState === "DISMISSED");
       const trashList = visits.filter(v => v.reviewState === "TRASHED" || v.ampel === "TRASH");
 
       // Zähler aktualisieren
@@ -6219,7 +7368,11 @@
         }
 
         const isTrash = v.reviewState === "TRASHED" || v.ampel === "TRASH";
-        const isConfirmed = v.reviewState === "CONFIRMED" || v.reviewState === "SENT";
+        const isConfirmed = v.reviewState === "CONFIRMED" || v.reviewState === "SENT" || v.reviewState === "DISMISSED";
+        const canDeepCheck = ["ROTWILD", "DAMWILD", "REHWILD", "SCHWARZWILD"].includes(v.category) && !isTrash;
+        const deepBtnHtml = canDeepCheck
+          ? `<button type="button" class="btn-sm btn-deep-trophy" onclick="runDeepTrophyCheckForVisit('${escapeHTML(v.id)}')" title="Stufe-2 Trophäen-Tiefenprüfung (bis zu 3 Bilder)">🔬 ${v.trophyDeepChecked ? "Neu prüfen" : "Trophäen-Check"}</button>`
+          : "";
         const isAlertCat = (v.category === "WOLF" || v.category === "SCHAKAL" || v.category === "WILDKATZE");
         const cardCls = `visit-card ${
           isAlertCat ? "v-wolf" :
@@ -6254,12 +7407,14 @@
           : isConfirmed
           ? `
             <button type="button" class="btn-sm btn-no" onclick="openLupeModal('${escapeHTML(v.id)}')">🔍 Lupe</button>
+            ${deepBtnHtml}
             <button type="button" class="btn-sm btn-no" style="flex:1;" onclick="openEditVisitModal('${escapeHTML(v.id)}')">✏️ Korrektur</button>
             <button type="button" class="btn-sm btn-warn" onclick="reopenVisit('${escapeHTML(v.id)}')">↺ Offen</button>
           `
           : `
             <button type="button" class="btn-sm btn-yes" style="flex:1;" onclick="confirmVisit('${escapeHTML(v.id)}')">✅ Bestätigen</button>
             ${(canSwapDayMonthMs(v.startTs) && (v.yellowReasons || []).some(r => /Datumssprung|Dreher/i.test(r))) ? `<button type="button" class="btn-sm btn-warn" onclick="quickSwapVisitDayMonth('${escapeHTML(v.id)}')" title="Tag und Monat tauschen">🔄 T↔M</button>` : ""}
+            ${deepBtnHtml}
             <button type="button" class="btn-sm btn-no" onclick="openLupeModal('${escapeHTML(v.id)}')">🔍 Lupe</button>
             <button type="button" class="btn-sm btn-no" onclick="openEditVisitModal('${escapeHTML(v.id)}')">✏️ Korrektur</button>
             <button type="button" class="btn-sm btn-danger" onclick="trashVisit('${escapeHTML(v.id)}')" title="In Papierkorb">🗑️</button>
@@ -6275,8 +7430,10 @@
               <div class="visit-meta-col">
                 <div style="display:flex; justify-content:space-between; align-items:center; gap:5px; flex-wrap:wrap; margin-bottom:3px;">
                   <span class="pill ${badgeCls}">${escapeHTML(getCategoryLabelDE(v.category))}${v.maxCount > 0 ? ` · ${v.maxCount}×` : ""}</span>
-                  ${v.isTrophy ? `<span class="pill pill-trophy">🏆 ${escapeHTML(getTrophyTypeLabelDE(v.trophyType))}</span>` : ""}
+                  ${v.isTrophy ? `<span class="pill pill-trophy">🏆 ${escapeHTML(getTrophyTypeLabelDE(v.trophyType))}${v.trophyClass ? ` · ${escapeHTML(v.trophyClass)}` : ""}</span>` : ""}
+                  ${v.isTrophy && v.trophyConfidence ? getTrophyConfidenceBadgeHTML(v.trophyConfidence) : ""}
                   ${v.reviewState === "SENT" ? `<span class="pill pill-green">📤 Übergeben</span>` : ""}
+                  ${v.reviewState === "DISMISSED" ? `<span class="pill pill-blue">✓ Ausgeblendet</span>` : ""}
                   ${v.rottenTag ? `<span class="pill pill-blue">🏷️ ${escapeHTML(v.rottenTag)}</span>` : ""}
                   ${v.trophyTag ? `<span class="pill pill-trophy">🎯 ${escapeHTML(v.trophyTag)}</span>` : ""}
                 </div>
@@ -6292,7 +7449,7 @@
               </div>
             </div>
 
-            ${v.isTrophy ? `<div class="visit-trophy-strip">🏆 ${escapeHTML(getTrophyTypeLabelDE(v.trophyType))}${v.trophyDetail ? ` · ${escapeHTML(v.trophyDetail)}` : ""}${v.trophyTag ? ` · Steckbrief: ${escapeHTML(v.trophyTag)}` : ""}</div>` : ""}
+            ${v.isTrophy ? `<div class="visit-trophy-strip">🏆 <strong>${escapeHTML(getTrophyTypeLabelDE(v.trophyType))}</strong>${v.trophyClass ? ` · Klasse <strong>${escapeHTML(v.trophyClass)}</strong>` : ""}${v.trophyDetail ? ` · ${escapeHTML(v.trophyDetail)}` : ""}${v.trophyStatus ? ` · ${escapeHTML(getTrophyStatusLabelDE(v.trophyStatus))}` : ""}${v.trophyCoatColor ? ` · Farbschlag: ${escapeHTML(v.trophyCoatColor)}` : ""}${v.trophyAgeEstimate ? `<br>🔎 Alter/Körper: ${escapeHTML(v.trophyAgeEstimate)}` : ""}${(v.trophyLeftAntler || v.trophyRightAntler) ? `<br>🦌 Stangen: L: ${escapeHTML(v.trophyLeftAntler || "–")} | R: ${escapeHTML(v.trophyRightAntler || "–")}` : ""}${v.trophyVisibilityReason && v.trophyConfidence !== "SICHER" ? `<br>ℹ️ Sicht: ${escapeHTML(v.trophyVisibilityReason)}` : ""}${v.trophyMatchHint ? `<br>🎯 Steckbrief-Treffer: ${escapeHTML(v.trophyMatchHint)}` : ""}${v.trophyTag ? ` · Steckbrief: ${escapeHTML(v.trophyTag)}` : ""}${v.trophyDeepChecked ? ` <span style="opacity:0.75;">(🔬 geprüft)</span>` : ""}</div>` : ""}
             ${boarTxt ? `<div class="visit-boar-strip">🐗 ${escapeHTML(boarTxt)}</div>` : ""}
             ${(!isConfirmed && !isTrash && v.yellowReasons && v.yellowReasons.length > 0) ? `<div class="visit-warn-strip">⚠️ Prüfen: ${escapeHTML(v.yellowReasons.join(" · "))}</div>` : ""}
 
@@ -6339,6 +7496,9 @@
         showToast("ℹ️ Besuch wurde bereits übergeben");
         return;
       }
+      if (v.isTrophy && !v.trophyPhotoDataUrl) {
+        v.trophyPhotoDataUrl = await generateCompressedTrophyPhotoDataUrl(v);
+      }
       v.reviewState = "CONFIRMED";
       v.ampel = "GREEN";
       v.yellowReasons = [];
@@ -6365,6 +7525,9 @@
       const greens = visits.filter(v => v.reviewState === "OPEN" && v.ampel === "GREEN");
       if (greens.length === 0) return;
       for (const v of greens) {
+        if (v.isTrophy && !v.trophyPhotoDataUrl) {
+          v.trophyPhotoDataUrl = await generateCompressedTrophyPhotoDataUrl(v);
+        }
         v.reviewState = "CONFIRMED";
         v.updatedAt = Date.now();
         await idbPut("visits", v);
@@ -6783,6 +7946,7 @@
         if (defType) typeSel.value = defType;
       }
       if (active) {
+        populateTrophyTaxonomyDropdowns(typeSel?.value || "", document.getElementById("ev-trophy-class")?.value || "");
         populateTrophySelect(document.getElementById("ev-trophy-select")?.value || "");
       }
     }
@@ -6867,15 +8031,45 @@
       const trChk = document.getElementById("ev-is-trophy");
       const trTypeSel = document.getElementById("ev-trophy-type");
       const trDetInp = document.getElementById("ev-trophy-detail");
+      const trStatusSel = document.getElementById("ev-trophy-status");
+      const trCoatSel = document.getElementById("ev-trophy-coat");
+      const trAgeInp = document.getElementById("ev-trophy-age");
+      const trConfSel = document.getElementById("ev-trophy-confidence");
+      const trDeepBox = document.getElementById("ev-trophy-deep-summary");
+
+      const resolvedTrType = normalizeTrophyTypeVal(v.trophyType) || (isTr ? defaultTrophyTypeForCategory(v.category) : defaultTrophyTypeForCategory(v.category));
       if (trChk) trChk.checked = isTr;
-      if (trTypeSel) trTypeSel.value = normalizeTrophyTypeVal(v.trophyType) || (isTr ? defaultTrophyTypeForCategory(v.category) : "");
+      if (trTypeSel) trTypeSel.value = resolvedTrType || "";
       if (trDetInp) trDetInp.value = v.trophyDetail || "";
+      if (trStatusSel) trStatusSel.value = v.trophyStatus || "";
+      if (trCoatSel) trCoatSel.value = v.trophyCoatColor || "";
+      if (trAgeInp) trAgeInp.value = v.trophyAgeEstimate || "";
+      if (trConfSel) trConfSel.value = v.trophyConfidence || "";
+
+      if (trDeepBox) {
+        if (v.trophyDeepChecked) {
+          const lines = [];
+          lines.push(`<strong>🔬 Tiefenprüfung (${escapeHTML(v.trophyDeepModel || "KI")}):</strong> ${getTrophyConfidenceBadgeHTML(v.trophyConfidence)}`);
+          if (v.trophyLeftAntler || v.trophyRightAntler) {
+            lines.push(`Stangen: <strong>L:</strong> ${escapeHTML(v.trophyLeftAntler || "–")} · <strong>R:</strong> ${escapeHTML(v.trophyRightAntler || "–")}`);
+          }
+          if (v.trophyBodyNotes) lines.push(`Körperbau: ${escapeHTML(v.trophyBodyNotes)}`);
+          if (v.trophyVisibilityReason) lines.push(`Sicht: ${escapeHTML(v.trophyVisibilityReason)}`);
+          if (v.trophyMatchHint) lines.push(`🎯 Abgleich: ${escapeHTML(v.trophyMatchHint)}`);
+          trDeepBox.innerHTML = lines.join("<br>");
+          trDeepBox.style.display = "block";
+        } else {
+          trDeepBox.style.display = "none";
+          trDeepBox.innerHTML = "";
+        }
+      }
 
       __evBoarState = Object.assign(emptyBoarBreakdown(), v.boarBreakdown || {});
       onEditVisitCategoryChange();
-      if (trTypeSel && (v.trophyType || isTr)) {
-        trTypeSel.value = normalizeTrophyTypeVal(v.trophyType) || defaultTrophyTypeForCategory(v.category);
+      if (trTypeSel && resolvedTrType) {
+        trTypeSel.value = resolvedTrType;
       }
+      populateTrophyTaxonomyDropdowns(resolvedTrType, v.trophyClass || "");
       populateTrophySelect(v.trophyId || v.trophyTag || "");
       onEditTrophyToggle();
       renderEditBoarSteppers();
@@ -6938,16 +8132,30 @@
       v.isTrophy = isTrophyChecked;
       if (isTrophyChecked) {
         v.trophyType = normalizeTrophyTypeVal(document.getElementById("ev-trophy-type")?.value) || defaultTrophyTypeForCategory(cat);
+        v.trophyClass = (document.getElementById("ev-trophy-class")?.value || "").trim();
         v.trophyDetail = (document.getElementById("ev-trophy-detail")?.value || "").trim();
+        v.trophyStatus = (document.getElementById("ev-trophy-status")?.value || "").trim().toUpperCase();
+        v.trophyCoatColor = v.trophyType === "DAMHIRSCH" ? (document.getElementById("ev-trophy-coat")?.value || "").trim() : "";
+        v.trophyAgeEstimate = (document.getElementById("ev-trophy-age")?.value || "").trim();
+        v.trophyConfidence = (document.getElementById("ev-trophy-confidence")?.value || "").trim().toUpperCase();
         const trSel = document.getElementById("ev-trophy-select");
         const selVal = (trSel?.value || "").trim();
         const selOpt = trSel && trSel.selectedIndex >= 0 ? trSel.options[trSel.selectedIndex] : null;
         const selName = selOpt ? (selOpt.getAttribute("data-trophy-name") || "").trim() : "";
         v.trophyId = selVal;
         v.trophyTag = selVal ? (selName || selVal) : "";
+        if (!v.trophyPhotoDataUrl) {
+          v.trophyPhotoDataUrl = await generateCompressedTrophyPhotoDataUrl(v);
+        }
       } else {
         v.trophyType = "";
+        v.trophyClass = "";
         v.trophyDetail = "";
+        v.trophyStatus = "";
+        v.trophyCoatColor = "";
+        v.trophyAgeEstimate = "";
+        v.trophyConfidence = "";
+        v.trophyPhotoDataUrl = "";
         v.trophyId = "";
         v.trophyTag = "";
       }
@@ -7576,16 +8784,27 @@
       const spDetail = (v.speciesDetail || getCategoryLabelDE(cat).replace(/^[^\s]+\s/, "")).trim();
       const isTrophy = Boolean(v.isTrophy);
       const trophyType = isTrophy ? (normalizeTrophyTypeVal(v.trophyType) || defaultTrophyTypeForCategory(cat)) : "";
+      const trophyClass = isTrophy ? String(v.trophyClass || "").trim() : "";
       const trophyDetail = isTrophy ? String(v.trophyDetail || "").trim() : "";
+      const trophyStatus = isTrophy ? String(v.trophyStatus || "").trim() : "";
+      const trophyCoatColor = (isTrophy && trophyType === "DAMHIRSCH") ? String(v.trophyCoatColor || "").trim() : "";
+      const trophyAgeEstimate = isTrophy ? String(v.trophyAgeEstimate || "").trim() : "";
+      const trophyConfidence = isTrophy ? String(v.trophyConfidence || "").trim() : "";
       const trophyTag = isTrophy ? String(v.trophyTag || "").trim() : "";
       const trophyId = isTrophy ? String(v.trophyId || "").trim() : "";
       const isMaleTrophy = Boolean(isTrophy && ["REHBOCK", "DAMHIRSCH", "ROTHIRSCH"].includes(trophyType));
       const cleanTemp = parseCleanTempNumber(v.ocrTempC);
 
+      // Komprimiertes Best-Bild nur bei Trophäen & solange localStorage genug Reserve (< 3,5 MB) hat
+      let trophyPhotoDataUrl = "";
+      if (isTrophy && v.trophyPhotoDataUrl && estimateLocalStorageKB() < 3500) {
+        trophyPhotoDataUrl = v.trophyPhotoDataUrl;
+      }
+
       const noteParts = [];
       if (isTrophy) {
-        const tDesc = trophyDetail || getTrophyTypeLabelDE(trophyType);
-        noteParts.push(`🏆 ${tDesc}`);
+        const tBits = [trophyClass, trophyDetail || getTrophyTypeLabelDE(trophyType), getTrophyStatusLabelDE(trophyStatus), trophyCoatColor].filter(Boolean);
+        noteParts.push(`🏆 ${tBits.join(" · ")}`);
       }
       if (v.cameraName && v.cameraName !== "Ohne Profil") noteParts.push(`Kamera: ${v.cameraName}`);
       if (v.ocrCameraInfo && !String(v.cameraName || "").toLowerCase().includes(String(v.ocrCameraInfo).toLowerCase())) {
@@ -7599,7 +8818,7 @@
         inboxId: `ul_${v.id}`,
         visitId: v.id,
         source: "UEBERLAEUFER",
-        sourceVersion: "0.5.6",
+        sourceVersion: "0.6.0",
         createdAt: Date.now(),
         status: isSw ? (statusVal || "GREEN") : (statusVal || "BEIFANG"),
         category: cat,
@@ -7623,7 +8842,15 @@
         rottenTag: isSw ? (v.rottenTag || "") : "",
         isTrophy,
         trophyType,
+        trophyClass,
         trophyDetail,
+        trophyStatus,
+        trophyCoatColor,
+        trophyAgeEstimate,
+        trophyConfidence,
+        trophyBodyNotes: isTrophy ? String(v.trophyBodyNotes || "").trim() : "",
+        trophyDeepChecked: isTrophy ? Boolean(v.trophyDeepChecked) : false,
+        trophyPhotoDataUrl,
         trophyTag,
         trophyId,
         isMaleTrophy,
@@ -7705,8 +8932,8 @@
 
       const readySw = visits.filter(v => v.reviewState === "CONFIRMED" && v.category === "SCHWARZWILD");
       const readyBycatch = visits.filter(v => v.reviewState === "CONFIRMED" && isBycatchTransferVisit(v));
-      const sentAll = visits.filter(v => v.reviewState === "SENT");
-      const allConfirmed = visits.filter(v => v.reviewState === "CONFIRMED" || v.reviewState === "SENT");
+      const sentAll = visits.filter(v => v.reviewState === "SENT" || v.reviewState === "DISMISSED");
+      const allConfirmed = visits.filter(v => v.reviewState === "CONFIRMED" || v.reviewState === "SENT" || v.reviewState === "DISMISSED");
 
       // Zähler & Badges aktualisieren
       const setTxt = (id, t) => { const el = document.getElementById(id); if (el) el.textContent = String(t); };
@@ -7719,10 +8946,11 @@
       setTxt("ueb-sent-hist-pill", `${sentAll.length}`);
       setTxt("ueb-all-confirmed-pill", `${allConfirmed.length} gesamt`);
 
+      const totalReadyUeb = readySw.length + readyBycatch.length;
       const navUeb = document.getElementById("nav-badge-uebergabe");
       if (navUeb) {
-        navUeb.textContent = readySw.length > 99 ? "99+" : String(readySw.length);
-        navUeb.style.display = readySw.length > 0 ? "flex" : "none";
+        navUeb.textContent = totalReadyUeb > 99 ? "99+" : String(totalReadyUeb);
+        navUeb.style.display = totalReadyUeb > 0 ? "flex" : "none";
       }
 
       const inboxJsonStr = JSON.stringify(inbox, null, 2);
@@ -7735,11 +8963,14 @@
       const readyListEl = document.getElementById("ueb-ready-list");
       const sendBarEl = document.getElementById("ueb-send-bar");
       const mergeBarEl = document.getElementById("ueb-merge-bar");
+      const swDupBarEl = document.getElementById("ueb-sw-dup-dismiss-bar");
+      let swDupCount = 0;
 
       if (readyListEl) {
         if (readySw.length === 0) {
           if (sendBarEl) sendBarEl.style.display = "none";
           if (mergeBarEl) mergeBarEl.style.display = "none";
+          if (swDupBarEl) swDupBarEl.style.display = "none";
           readyListEl.innerHTML = `<div class="tile-sub" style="text-align:center; padding:10px 6px;">Aktuell keine neuen Schwarzwild-Besuche zur Übergabe offen. Bestätige Besuche zuerst im Tab <strong>🚦 Prüfen</strong>.</div>`;
           syncUebergabeListCollapseUI("sw", 0);
         } else {
@@ -7749,6 +8980,7 @@
             const targetKanzel = v.mappedKanzel || "";
             const effectiveTarget = targetKanzel || v.spotName || "Revier allgemein";
             const possibleDup = findPossibleSauenmatrixDuplicate(v, effectiveTarget);
+            if (possibleDup) swDupCount++;
             const isFlexSpot = isFlexibleNoKanzelSpotKey(v.spotKey);
             const needsTargetMap = !targetKanzel && smSpots.length > 0;
             const boarTxt = formatBoarBreakdownText(v.boarBreakdown) || `${v.maxCount || 0}× Schwarzwild`;
@@ -7778,6 +9010,7 @@
                           ${possibleDup ? "⚠️ Evtl. schon in SMX" : `🐗 ${v.maxCount || 0}×`}
                         </span>
                         <button type="button" class="btn-sm btn-no" style="padding:3px 7px; font-size:0.7rem;" onclick="openEditVisitModal('${escapeHTML(v.id)}')" title="Besuch korrigieren">✏️</button>
+                        <button type="button" class="btn-sm btn-no" style="padding:3px 7px; font-size:0.7rem; color:#ffe899;" onclick="dismissUebergabeVisit('${escapeHTML(v.id)}')" title="Als erledigt ausblenden (ohne Übergabe)">✓ Weg</button>
                       </div>
                     </div>
                     <div style="color:#d4f3dd; font-weight:700;">
@@ -7793,6 +9026,7 @@
               </div>
             `;
           }).join("");
+          if (swDupBarEl) swDupBarEl.style.display = swDupCount > 0 ? "block" : "none";
           syncUebergabeListCollapseUI("sw", readySw.length);
         }
       }
@@ -7800,9 +9034,12 @@
       // 1B. Liste bereiter Beifang-Besuche (getrennt von Schwarzwild, inkl. sm_beifang_v1 Dublettenschutz & Revier-allgemein ohne Zwangskanzel)
       const bycatchListEl = document.getElementById("ueb-bycatch-ready-list");
       const bycatchSendBar = document.getElementById("ueb-bycatch-send-bar");
+      const bfDupBarEl = document.getElementById("ueb-bycatch-dup-dismiss-bar");
+      let bfDupCount = 0;
       if (bycatchListEl) {
         if (readyBycatch.length === 0) {
           if (bycatchSendBar) bycatchSendBar.style.display = "none";
+          if (bfDupBarEl) bfDupBarEl.style.display = "none";
           bycatchListEl.innerHTML = `<div class="tile-sub" style="text-align:center; padding:8px 6px;">Aktuell keine neuen bestätigten Beifänge zur Übergabe offen.</div>`;
           syncUebergabeListCollapseUI("bycatch", 0);
         } else {
@@ -7811,6 +9048,7 @@
             const targetKanzel = v.mappedKanzel || "";
             const effectiveTarget = targetKanzel || v.spotName || "Revier allgemein";
             const possibleDup = findPossibleBeifangDuplicate(v, effectiveTarget);
+            if (possibleDup) bfDupCount++;
             const isFlexSpot = isFlexibleNoKanzelSpotKey(v.spotKey);
             const needsTargetMap = !targetKanzel && smSpots.length > 0;
             const isSpecialAlert = ["WOLF", "SCHAKAL", "WILDKATZE", "BESONDERES"].includes(v.category);
@@ -7840,6 +9078,7 @@
                         ${possibleDup ? `<span class="pill pill-yellow">⚠️ Evtl. schon in SMX</span>` : ""}
                         <span class="pill ${pillCls}">${escapeHTML(getCategoryLabelDE(v.category))}${v.maxCount > 0 ? ` · ${v.maxCount}×` : ""}</span>
                         <button type="button" class="btn-sm btn-no" style="padding:3px 7px; font-size:0.7rem;" onclick="openEditVisitModal('${escapeHTML(v.id)}')" title="Besuch korrigieren">✏️</button>
+                        <button type="button" class="btn-sm btn-no" style="padding:3px 7px; font-size:0.7rem; color:#ffe899;" onclick="dismissUebergabeVisit('${escapeHTML(v.id)}')" title="Als erledigt ausblenden (ohne Übergabe)">✓ Weg</button>
                       </div>
                     </div>
                     <div style="color:#d4f3dd; font-weight:700;">
@@ -7855,6 +9094,7 @@
               </div>
             `;
           }).join("");
+          if (bfDupBarEl) bfDupBarEl.style.display = bfDupCount > 0 ? "block" : "none";
           syncUebergabeListCollapseUI("bycatch", readyBycatch.length);
         }
       }
@@ -7916,7 +9156,7 @@
             return `
             <div class="spot-row" style="padding:7px 9px; margin-bottom:6px;">
               <div style="font-size:0.73rem; line-height:1.35;">
-                <strong>${escapeHTML(catLbl)} ${escapeHTML(v.sentKanzel || v.mappedKanzel || v.spotName)}</strong> (${v.maxCount || 0}×)${v.isTrophy ? ` <span class="pill pill-trophy" style="font-size:0.64rem;">🏆 ${escapeHTML(v.trophyDetail || getTrophyTypeLabelDE(v.trophyType))}</span>` : ""}<br>
+                <strong>${escapeHTML(catLbl)} ${escapeHTML(v.sentKanzel || v.mappedKanzel || v.spotName)}</strong> (${v.maxCount || 0}×) ${v.reviewState === "DISMISSED" ? `<span class="pill pill-blue" style="font-size:0.62rem;">✓ ausgeblendet</span>` : ""}${v.isTrophy ? ` <span class="pill pill-trophy" style="font-size:0.64rem;">🏆 ${escapeHTML(v.trophyClass ? v.trophyClass + " · " : "")}${escapeHTML(v.trophyDetail || getTrophyTypeLabelDE(v.trophyType))}</span>` : ""}<br>
                 <span style="color:var(--text-muted);">${escapeHTML(formatDateDE(v.startTs))} · ${escapeHTML(formatTimeHHMM(v.startTs))}–${escapeHTML(formatTimeHHMM(v.endTs))}${v.category !== "SCHWARZWILD" && v.speciesDetail ? ` · ${escapeHTML(v.speciesDetail)}` : ""}</span>
               </div>
               <button type="button" class="btn-sm btn-no" style="padding:4px 8px; font-size:0.7rem;" onclick="resetSentVisitToConfirmed('${escapeHTML(v.id)}')">↺ Erneut</button>
@@ -7955,6 +9195,50 @@
       if (kanzelName) showToast(`📍 Ziel-Kanzel „${kanzelName}“ zugewiesen`);
     }
 
+    async function dismissUebergabeVisit(visitId) {
+      const v = await idbGet("visits", visitId).catch(() => null);
+      if (!v) return;
+      removeInboxEntryByVisitIdSilent(v.id);
+      v.reviewState = "DISMISSED";
+      v.dismissedAt = Date.now();
+      v.updatedAt = Date.now();
+      await idbPut("visits", v);
+      await renderUebergabeView();
+      await renderPruefenVisits(false);
+      await refreshDiagnostics();
+      showToast("✓ Besuch ausgeblendet (über Historie jederzeit wiederherstellbar)");
+    }
+
+    async function dismissAllDuplicateUebergabe(kind) {
+      const visits = await idbGetAll("visits").catch(() => []);
+      const targets = visits.filter(v => {
+        if (v.reviewState !== "CONFIRMED") return false;
+        const effTarget = v.mappedKanzel || v.spotName || "Revier allgemein";
+        if (kind === "sw") {
+          return v.category === "SCHWARZWILD" && findPossibleSauenmatrixDuplicate(v, effTarget);
+        }
+        return isBycatchTransferVisit(v) && findPossibleBeifangDuplicate(v, effTarget);
+      });
+      if (targets.length === 0) {
+        showToast("ℹ️ Keine möglichen Dubletten zum Ausblenden gefunden");
+        return;
+      }
+      if (!confirm(`${targets.length} als „Evtl. schon in SMX“ markierte Besuche aus der Übergabe ausblenden? (Sie bleiben in der Historie erhalten und können jederzeit über „↺ Erneut“ zurückgeholt werden.)`)) {
+        return;
+      }
+      for (const v of targets) {
+        removeInboxEntryByVisitIdSilent(v.id);
+        v.reviewState = "DISMISSED";
+        v.dismissedAt = Date.now();
+        v.updatedAt = Date.now();
+        await idbPut("visits", v);
+      }
+      await renderUebergabeView();
+      await renderPruefenVisits(false);
+      await refreshDiagnostics();
+      showToast(`🧹 ${targets.length} mögliche Dublette(n) ausgeblendet`);
+    }
+
     async function pushCheckedVisitsToInbox(selector, statusVal, labelNoun) {
       const checks = Array.from(document.querySelectorAll(selector));
       if (checks.length === 0) {
@@ -7970,6 +9254,10 @@
         const vid = chk.getAttribute("data-visit-id");
         const v = await idbGet("visits", vid).catch(() => null);
         if (!v) continue;
+        if (v.isTrophy && !v.trophyPhotoDataUrl) {
+          v.trophyPhotoDataUrl = await generateCompressedTrophyPhotoDataUrl(v);
+          await idbPut("visits", v);
+        }
         const entry = buildInboxEntryFromVisit(v, statusVal);
         const existIdx = inbox.findIndex(e => e.inboxId === entry.inboxId);
         if (existIdx >= 0) {
@@ -8130,12 +9418,13 @@
       const cleanVisits = rawVisits.map(v => {
         const copy = Object.assign({}, v);
         delete copy.thumbBlob;
+        delete copy.trophyPhotoDataUrl;
         return copy;
       });
 
       const payload = {
         app: "Ueberlaeufer",
-        version: "0.5.6",
+        version: "0.6.0",
         exportedAt: new Date().toISOString(),
         preferences: {
           packSize: getPackSizePref(),
@@ -8331,10 +9620,11 @@
       const uebOtEl = document.getElementById("ueb-confirmed-other-val");
       if (uebSwEl) uebSwEl.textContent = `${confSw}`;
       if (uebOtEl) uebOtEl.textContent = `${confOther}`;
+      const totalReadyDiag = confSw + confOther;
       const navUeb = document.getElementById("nav-badge-uebergabe");
       if (navUeb) {
-        navUeb.textContent = confSw > 99 ? "99+" : String(confSw);
-        navUeb.style.display = confSw > 0 ? "flex" : "none";
+        navUeb.textContent = totalReadyDiag > 99 ? "99+" : String(totalReadyDiag);
+        navUeb.style.display = totalReadyDiag > 0 ? "flex" : "none";
       }
 
       const lsKB = estimateLocalStorageKB();
@@ -8638,6 +9928,51 @@
       return new Promise(async (resolve) => {
         const fingerprint = await computeLocalFingerprint(file);
         const nameInfo = analyzeFilenamePattern(file.name);
+        if (/\.avi$/i.test(String(file.name || ""))) {
+          try {
+            const aviRes = await extractFramesFromAviMjpeg(file);
+            const framesOut = [];
+            for (const fr of aviRes.frames) {
+              const tUrl = URL.createObjectURL(fr.thumbBlob);
+              const b64 = await blobToBase64Pure(fr.thumbBlob);
+              URL.revokeObjectURL(tUrl);
+              framesOut.push({ sec: fr.sec, thumbUrl: "data:image/jpeg;base64," + b64, avgBrightness: fr.avgBrightness });
+            }
+            resolve({
+              kind: "VIDEO",
+              fileName: file.name,
+              fileSize: file.size,
+              mime: "video/x-msvideo (MJPEG-Extraktor)",
+              lastModified: file.lastModified,
+              fingerprint,
+              nameInfo,
+              width: aviRes.width,
+              height: aviRes.height,
+              duration: aviRes.duration,
+              frames: framesOut,
+              topStripUrl: null,
+              bottomStripUrl: null,
+              error: null
+            });
+            return;
+          } catch (aviErr) {
+            resolve({
+              kind: "VIDEO",
+              fileName: file.name,
+              fileSize: file.size,
+              mime: file.type || "video/x-msvideo",
+              lastModified: file.lastModified,
+              fingerprint,
+              nameInfo,
+              width: 0,
+              height: 0,
+              duration: 0,
+              frames: [],
+              error: aviErr.message
+            });
+            return;
+          }
+        }
         const url = URL.createObjectURL(file);
         const video = document.createElement("video");
         video.muted = true;
@@ -8945,7 +10280,9 @@
       syncNightDimButtons();
       loadApiKeyUI();
       loadAiPreferencesUI();
+      loadTrophyAiPrefsUI();
       syncVisitGapSelectors();
+      registerUeberlaeuferServiceWorker();
 
       let loadedLogo = null;
       try {
@@ -8966,6 +10303,7 @@
         }
       } catch (e) {}
 
+      await syncSharedCameraSpots();
       await loadQuotaState();
       await renderSpotsViews();
       await renderCamerasList();
@@ -8977,6 +10315,8 @@
       await refreshDiagnostics();
       showHomeStartScreen();
       history.pushState({ protected: true }, "");
+      // Falls Dateien aus der Samsung-Galerie über „Teilen → Überläufer“ ankamen: sofort importieren!
+      await consumeSharedGalleryFiles();
     }
 
     initUeberlaeufer();
